@@ -48,7 +48,7 @@
       <div class="card">
         <h2>Submit a Claim</h2>
         <input type="text" id="claimId" placeholder="Claim ID (e.g., claim-1)">
-        <textarea id="claimText" rows="3" placeholder="Enter your claim (e.g., 'The Earth is flat')"></textarea>
+        <textarea id="claimText" rows="3" placeholder="Enter your claim"></textarea>
         <button onclick="submitClaim()" id="submitBtn">Submit Claim</button>
         <div id="submitStatus"></div>
       </div>
@@ -92,155 +92,116 @@
     </div>
   </div>
   
-  <script type="module">
-    // Use esm.sh for better ESM compatibility
-    import { createClient, createAccount } from 'https://esm.sh/genlayer-js@1.1.8';
-    import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
-    
-    const CONTRACT_ADDRESS = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
-    let client = null;
+  <script>
+    // TruthOracle dApp - Pure JavaScript, no external dependencies
+    const CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+    const CONSENSUS = '0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D';
+    const RPC = 'https://rpc-bradbury.genlayer.com';
     let account = null;
-    
-    // Detect wallet provider (MetaMask, Rabby, etc.)
+
     function getProvider() {
-      // Check all possible wallet injection points
       if (window.ethereum) return window.ethereum;
-      if (window.rabby?.provider) return window.rabby.provider;
-      if (window.web3?.currentProvider) return window.web3.currentProvider;
       return null;
     }
-    
-    window.connectWallet = async () => {
+
+    async function connectWallet() {
+      const provider = getProvider();
+      if (!provider) {
+        showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
+        return;
+      }
       try {
-        const provider = getProvider();
-        
-        if (!provider) {
-          showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby wallet extension.', 'error');
-          return;
-        }
-        
-        // Request account access
-        const accounts = await provider.request({ 
-          method: 'eth_requestAccounts' 
-        });
-        
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || accounts.length === 0) {
           showStatus('submitStatus', 'No accounts found. Please unlock your wallet.', 'error');
           return;
         }
-        
         account = accounts[0];
-        
-        // Create genlayer client with the wallet address
-        client = createClient({
-          chain: testnetBradbury,
-          account: account
-        });
-        
-        document.getElementById('walletAddress').textContent = account.slice(0, 6) + '...' + account.slice(-4);
+        document.getElementById('walletAddress').textContent = account.slice(0,6)+'...'+account.slice(-4);
         document.getElementById('connectBtn').textContent = 'Connected';
-        showStatus('submitStatus', 'Wallet connected: ' + account.slice(0, 6) + '...', 'success');
-        
+        showStatus('submitStatus', 'Connected: ' + account.slice(0,6) + '...', 'success');
       } catch (err) {
-        console.error('Connection error:', err);
-        if (err.code === 4001) {
-          showStatus('submitStatus', 'Connection rejected.', 'error');
-        } else if (err.code === -32002) {
-          showStatus('submitStatus', 'Connection request already pending. Please check your wallet.', 'error');
-        } else {
-          showStatus('submitStatus', 'Connection failed: ' + (err.message || 'Unknown error'), 'error');
-        }
+        showStatus('submitStatus', 'Error: ' + err.message, 'error');
       }
-    };
-    
-    window.submitClaim = async () => {
-      if (!client) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
+    }
+
+    async function submitClaim() {
+      if (!account) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('claimId').value;
       const text = document.getElementById('claimText').value;
       if (!claimId || !text) { showStatus('submitStatus', 'Fill all fields', 'error'); return; }
-      
       try {
         document.getElementById('submitBtn').disabled = true;
         showStatus('submitStatus', 'Submitting...', 'info');
-        const txHash = await client.writeContract({
-          address: CONTRACT_ADDRESS,
-          functionName: 'submit_claim',
-          args: [claimId, text],
-          value: 0
+        const provider = getProvider();
+        // Encode: submit_claim(string claimId, string text)
+        const selector = '0x4f6e982b';
+        const data = selector + stringParam(claimId) + stringParam(text);
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: account, to: CONSENSUS, data: data, value: '0x0' }]
         });
-        showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0, 20) + '...', 'success');
+        showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'success');
       } catch (err) {
         showStatus('submitStatus', 'Error: ' + err.message, 'error');
       }
       document.getElementById('submitBtn').disabled = false;
-    };
-    
-    window.resolveClaim = async () => {
-      if (!client) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
+    }
+
+    async function resolveClaim() {
+      if (!account) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('resolveClaimId').value;
       if (!claimId) { showStatus('resolveStatus', 'Enter claim ID', 'error'); return; }
-      
       try {
         document.getElementById('resolveBtn').disabled = true;
         showStatus('resolveStatus', 'Running AI consensus...', 'info');
-        const txHash = await client.writeContract({
-          address: CONTRACT_ADDRESS,
-          functionName: 'resolve_claim',
-          args: [claimId],
-          value: 0
+        const provider = getProvider();
+        // Encode: resolve_claim(string claimId)
+        const selector = '0x3d18d4d8';
+        const data = selector + stringParam(claimId);
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: account, to: CONSENSUS, data: data, value: '0x0' }]
         });
-        showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0, 20) + '...', 'success');
-        setTimeout(() => loadClaim(claimId), 2000);
+        showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'success');
       } catch (err) {
         showStatus('resolveStatus', 'Error: ' + err.message, 'error');
       }
       document.getElementById('resolveBtn').disabled = false;
-    };
-    
-    window.loadClaims = async () => {
-      if (!client) { document.getElementById('claimsList').innerHTML = '<p style="color: #ff7f7f;">Connect wallet first</p>'; return; }
+    }
+
+    async function loadClaims() {
+      if (!account) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
       try {
-        const result = await client.readContract({
-          address: CONTRACT_ADDRESS,
-          functionName: 'get_claims_count',
-          args: [],
-          stateStatus: 'accepted'
+        const provider = getProvider();
+        const selector = '0x2e4a6e1a';
+        const result = await provider.request({
+          method: 'eth_call',
+          params: [{ from: account, to: CONTRACT, data: selector }, 'latest']
         });
-        const count = parseInt(result.data);
-        document.getElementById('claimsList').innerHTML = '<p style="color: #888;">Total claims: ' + count + '</p>';
+        const count = parseInt(result, 16);
+        document.getElementById('claimsList').innerHTML = '<p style="color:#888">Total claims: ' + count + '</p>';
       } catch (err) {
-        document.getElementById('claimsList').innerHTML = '<p style="color: #ff7f7f;">Error loading claims</p>';
-      }
-    };
-    
-    async function loadClaim(claimId) {
-      try {
-        const result = await client.readContract({
-          address: CONTRACT_ADDRESS,
-          functionName: 'get_claim',
-          args: [claimId],
-          stateStatus: 'accepted'
-        });
-        const claim = JSON.parse(result.data);
-        if (claim.exists && claim.resolved) {
-          document.getElementById('verdictResult').innerHTML = 
-            '<div class="verdict ' + claim.verdict + '">' + claim.verdict + '</div>';
-        }
-      } catch (err) {
-        console.error(err);
+        document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Error loading claims</p>';
       }
     }
-    
+
+    function stringParam(str) {
+      const hex = Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
+      const len = hex.length / 2;
+      return len.toString(16).padStart(64,'0') + hex.padEnd(64,'0');
+    }
+
     function showStatus(id, msg, type) {
       document.getElementById(id).innerHTML = '<div class="status ' + type + '">' + msg + '</div>';
     }
-    
-    window.showTab = (tab) => {
+
+    function showTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById(tab).classList.add('active');
-    };
+    }
   </script>
 </body>
 </html>
