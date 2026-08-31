@@ -80,6 +80,7 @@ button:disabled{opacity:.5}
 
 <script>
 var CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+var CONSENSUS = '0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D';
 var acct = null;
 var logEl = document.getElementById('log');
 
@@ -90,7 +91,6 @@ function L(m) {
 
 L('page loaded');
 L('ethereum: ' + (window.ethereum ? 'YES' : 'NO'));
-L('rabby: ' + (window.rabby ? 'YES' : 'NO'));
 
 function prov() {
   if (window.ethereum) return window.ethereum;
@@ -119,11 +119,27 @@ function submit() {
   if (!id || !txt) { msg('ss', 'Fill all fields', 'err'); return; }
   msg('ss', 'Submitting...', 'info');
   var p = prov();
-  var sel = '0x4f6e982b';
-  var data = sel + enc(id) + enc(txt);
-  p.request({ method: 'eth_sendTransaction', params: [{ from: acct, to: CONTRACT, data: data, value: '0x0' }] })
-   .then(function(tx) { msg('ss', 'Submitted! ' + tx.slice(0,20), 'ok'); })
-   .catch(function(e) { msg('ss', 'Error: ' + e.message, 'err'); });
+  
+  // Build calldata for submit_claim(string,string)
+  var selector = '0x4f6e982b';
+  var data = selector + enc(id) + enc(txt);
+  
+  // Send through consensus contract
+  var tx = {
+    from: acct,
+    to: CONSENSUS,
+    data: data,
+    value: '0x0'
+  };
+  
+  L('sending tx: ' + JSON.stringify(tx));
+  
+  p.request({ method: 'eth_sendTransaction', params: [tx] })
+   .then(function(txHash) {
+     L('tx hash: ' + txHash);
+     msg('ss', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'ok');
+   })
+   .catch(function(e) { L('err: ' + e.message); msg('ss', 'Error: ' + e.message, 'err'); });
 }
 
 function resolve() {
@@ -132,11 +148,26 @@ function resolve() {
   if (!id) { msg('rs', 'Enter claim ID', 'err'); return; }
   msg('rs', 'Resolving...', 'info');
   var p = prov();
-  var sel = '0x3d18d4d8';
-  var data = sel + enc(id);
-  p.request({ method: 'eth_sendTransaction', params: [{ from: acct, to: CONTRACT, data: data, value: '0x0' }] })
-   .then(function(tx) { msg('rs', 'Resolved! ' + tx.slice(0,20), 'ok'); })
-   .catch(function(e) { msg('rs', 'Error: ' + e.message, 'err'); });
+  
+  // Build calldata for resolve_claim(string)
+  var selector = '0x3d18d4d8';
+  var data = selector + enc(id);
+  
+  var tx = {
+    from: acct,
+    to: CONSENSUS,
+    data: data,
+    value: '0x0'
+  };
+  
+  L('sending tx: ' + JSON.stringify(tx));
+  
+  p.request({ method: 'eth_sendTransaction', params: [tx] })
+   .then(function(txHash) {
+     L('tx hash: ' + txHash);
+     msg('rs', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'ok');
+   })
+   .catch(function(e) { L('err: ' + e.message); msg('rs', 'Error: ' + e.message, 'err'); });
 }
 
 function load() {
