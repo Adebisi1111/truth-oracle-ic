@@ -1,286 +1,311 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TruthOracle</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#581c87 50%,#0f172a 100%);min-height:100vh;color:#fff}
-.max-w{max-width:1200px;margin:0 auto;padding:0 1rem}
-header{border-bottom:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);background:rgba(255,255,255,0.05);padding:1rem 0}
-header .max-w{display:flex;justify-content:space-between;align-items:center}
-.logo{display:flex;align-items:center;gap:0.75rem}
-.logo-icon{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.2rem}
-.logo-text h1{font-size:1.25rem;font-weight:bold}
-.logo-text p{font-size:0.75rem;color:rgba(255,255,255,0.5)}
-.btn{padding:0.5rem 1rem;border-radius:8px;font-weight:500;font-size:0.875rem;cursor:pointer;transition:all 0.2s;border:none}
-.btn-primary{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2)}
-.btn-primary:hover{background:rgba(255,255,255,0.2)}
-.btn-success{background:rgba(34,197,94,0.2);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
-.btn-gradient{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff}
-.btn-gradient:hover{opacity:0.9}
-.btn-gradient:disabled{opacity:0.5;cursor:not-allowed}
-.hero{text-align:center;padding:3rem 0}
-.hero h2{font-size:2.5rem;font-weight:bold;margin-bottom:1rem}
-.hero p{color:rgba(255,255,255,0.6);font-size:1.125rem;max-width:600px;margin:0 auto}
-.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
-.card h3{font-size:1.125rem;font-weight:600;margin-bottom:1rem}
-.input{width:100%;padding:0.75rem 1rem;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:0.875rem;margin-bottom:1rem}
-.input::placeholder{color:rgba(255,255,255,0.3)}
-.input:focus{outline:none;border-color:#a855f7}
-select.input{cursor:pointer}
-select.input option{background:#1e1b4b;color:#fff}
-.error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1rem;margin-bottom:1.5rem;color:#f87171;font-size:0.875rem}
-.claims-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem}
-.claims-header h3{font-size:1.125rem;font-weight:600}
-.filters{display:flex;gap:0.5rem;flex-wrap:wrap}
-.filters input{max-width:200px;margin-bottom:0}
-.filter-btn{padding:0.375rem 0.75rem;border-radius:8px;font-size:0.875rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6)}
-.filter-btn.active{background:rgba(168,85,247,0.3);color:#c084fc;border-color:rgba(168,85,247,0.5)}
-.claims-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
-.claim-card{background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem;transition:all 0.2s}
-.claim-card:hover{background:rgba(255,255,255,0.1)}
-.claim-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:0.75rem}
-.claim-id{font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:monospace}
-.verdict{padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:500;border:1px solid}
-.verdict-true{background:rgba(34,197,94,0.2);color:#4ade80;border-color:rgba(34,197,94,0.3)}
-.verdict-false{background:rgba(239,68,68,0.2);color:#f87171;border-color:rgba(239,68,68,0.3)}
-.verdict-inconclusive{background:rgba(234,179,8,0.2);color:#facc15;border-color:rgba(234,179,8,0.3)}
-.claim-text{font-weight:500;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.category{display:inline-block;padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:500;background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.3);margin-bottom:0.75rem}
-.claim-details{background:rgba(255,255,255,0.05);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem}
-.claim-details-row{display:flex;gap:1rem;font-size:0.75rem;color:rgba(255,255,255,0.6);margin-bottom:0.5rem}
-.claim-reasoning{font-size:0.875rem;color:rgba(255,255,255,0.7);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.claim-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
-.claim-submitter{font-size:0.75rem;color:rgba(255,255,255,0.4)}
-.claim-time{font-size:0.75rem;color:rgba(255,255,255,0.3)}
-.resolve-btn{padding:0.375rem 0.75rem;border-radius:8px;font-size:0.875rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.2);color:#c084fc}
-.resolve-btn:hover{background:rgba(168,85,247,0.3)}
-.resolve-btn:disabled{opacity:0.5;cursor:not-allowed}
-.empty{text-align:center;padding:3rem;color:rgba(255,255,255,0.4)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:2rem 0}
-.stat-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem;text-align:center}
-.stat-value{font-size:1.5rem;font-weight:bold}
-.stat-label{font-size:0.875rem;color:rgba(255,255,255,0.4)}
-.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem}
-.info-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem}
-.info-card h4{font-weight:500;margin-bottom:0.5rem}
-.info-card p{font-size:0.875rem;color:rgba(255,255,255,0.4)}
-footer{border-top:1px solid rgba(255,255,255,0.1);margin-top:3rem;padding:1.5rem 0;text-align:center;color:rgba(255,255,255,0.3);font-size:0.875rem}
-@media(max-width:768px){.stats{grid-template-columns:repeat(2,1fr)}.info-grid{grid-template-columns:1fr}.hero h2{font-size:1.75rem}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruthOracle — Decentralized Fact Verification</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Inter',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);min-height:100vh;color:#fff;line-height:1.6}
+    
+    /* Header */
+    header{border-bottom:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(12px);background:rgba(15,23,42,0.8);position:sticky;top:0;z-index:50}
+    .header-inner{max-width:1280px;margin:0 auto;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+    .logo{display:flex;align-items:center;gap:0.75rem}
+    .logo-icon{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.25rem;box-shadow:0 4px 12px rgba(168,85,247,0.3)}
+    .logo h1{font-size:1.25rem;font-weight:700;letter-spacing:-0.025em}
+    .logo span{font-size:0.75rem;color:rgba(255,255,255,0.4);display:block}
+    
+    .btn{padding:0.625rem 1.25rem;border-radius:10px;font-weight:600;font-size:0.875rem;cursor:pointer;transition:all 0.2s ease;border:none;display:inline-flex;align-items:center;gap:0.5rem}
+    .btn-primary{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.15)}
+    .btn-primary:hover{background:rgba(255,255,255,0.12)}
+    .btn-gradient{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;box-shadow:0 4px 12px rgba(168,85,247,0.3)}
+    .btn-gradient:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(168,85,247,0.4)}
+    .btn-gradient:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+    .btn-outline{background:transparent;color:#c084fc;border:1px solid rgba(168,85,247,0.4)}
+    .btn-outline:hover{background:rgba(168,85,247,0.1)}
+    
+    /* Layout */
+    .container{max-width:1280px;margin:0 auto;padding:2rem}
+    
+    /* Hero */
+    .hero{text-align:center;padding:4rem 0 3rem}
+    .hero h2{font-size:3.5rem;font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin-bottom:1.25rem;background:linear-gradient(135deg,#fff 0%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{color:rgba(255,255,255,0.5);font-size:1.25rem;max-width:600px;margin:0 auto}
+    
+    /* Cards */
+    .card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:20px;padding:2rem;margin-bottom:2rem;transition:all 0.2s}
+    .card:hover{border-color:rgba(255,255,255,0.1)}
+    .card-title{font-size:1.125rem;font-weight:600;margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem}
+    
+    /* Inputs */
+    .input{width:100%;padding:0.875rem 1rem;border-radius:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#fff;font-size:0.9375rem;margin-bottom:1rem;transition:all 0.2s;font-family:inherit}
+    .input::placeholder{color:rgba(255,255,255,0.25)}
+    .input:focus{outline:none;border-color:#a855f7;background:rgba(255,255,255,0.06)}
+    select.input{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(255,255,255,0.4)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 1rem center;padding-right:2.5rem}
+    select.input option{background:#1e1b4b;color:#fff}
+    textarea.input{resize:none}
+    
+    /* Stats */
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:2rem}
+    .stat-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:1.5rem;text-align:center}
+    .stat-value{font-size:2rem;font-weight:700;letter-spacing:-0.025em}
+    .stat-label{font-size:0.8125rem;color:rgba(255,255,255,0.4);margin-top:0.25rem}
+    
+    /* Claims Grid */
+    .claims-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+    .claims-header h3{font-size:1.125rem;font-weight:600}
+    .filters{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap}
+    .search-box{position:relative}
+    .search-box input{padding:0.5rem 1rem 0.5rem 2.25rem;max-width:220px;margin-bottom:0;font-size:0.875rem;border-radius:10px}
+    .search-box::before{content:'🔍';position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);font-size:0.75rem}
+    .filter-group{display:flex;gap:0.25rem;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.25rem}
+    .filter-btn{padding:0.375rem 0.875rem;border-radius:8px;font-size:0.8125rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:none;background:transparent;color:rgba(255,255,255,0.5)}
+    .filter-btn.active{background:rgba(168,85,247,0.2);color:#c084fc}
+    .filter-btn:hover:not(.active){color:#fff}
+    
+    .claims-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem}
+    .claim-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:1.5rem;transition:all 0.2s;display:flex;flex-direction:column}
+    .claim-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.1)}
+    .claim-top{display:flex;justify-content:space-between;align-items:start;margin-bottom:1rem}
+    .claim-id{font-size:0.75rem;color:rgba(255,255,255,0.3);font-family:'SF Mono',Monaco,monospace;font-weight:500}
+    .verdict{padding:0.25rem 0.625rem;border-radius:9999px;font-size:0.6875rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em}
+    .verdict-true{background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.2)}
+    .verdict-false{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
+    .verdict-inconclusive{background:rgba(234,179,8,0.15);color:#facc15;border:1px solid rgba(234,179,8,0.2)}
+    .claim-text{font-weight:500;font-size:0.9375rem;margin-bottom:1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+    .category{display:inline-block;padding:0.25rem 0.625rem;border-radius:9999px;font-size:0.6875rem;font-weight:500;background:rgba(168,85,247,0.1);color:#c084fc;border:1px solid rgba(168,85,247,0.2);margin-bottom:1rem}
+    .claim-details{background:rgba(0,0,0,0.2);border-radius:10px;padding:1rem;margin-bottom:1rem;flex:1}
+    .details-row{display:flex;justify-content:space-between;font-size:0.75rem;color:rgba(255,255,255,0.5);margin-bottom:0.5rem}
+    .details-row span:last-child{color:rgba(255,255,255,0.7);font-weight:500}
+    .reasoning{font-size:0.8125rem;color:rgba(255,255,255,0.6);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5}
+    .claim-footer{display:flex;justify-content:space-between;align-items:center;auto;margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.05)}
+    .claim-submitter{font-size:0.75rem;color:rgba(255,255,255,0.35);font-family:'SF Mono',Monaco,monospace}
+    .claim-time{font-size:0.6875rem;color:rgba(255,255,255,0.25)}
+    .resolve-btn{padding:0.5rem 1rem;border-radius:8px;font-size:0.8125rem;font-weight:600;cursor:pointer;transition:all 0.2s;border:1px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.1);color:#c084fc}
+    .resolve-btn:hover{background:rgba(168,85,247,0.2)}
+    .resolve-btn:disabled{opacity:0.4;cursor:not-allowed}
+    .empty{grid-column:1/-1;text-align:center;padding:4rem;color:rgba(255,255,255,0.3)}
+    .empty-icon{font-size:3rem;margin-bottom:1rem;opacity:0.3}
+    
+    /* Info Grid */
+    .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:2rem}
+    .info-card{background:rgba(255,255,255,0.03);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:1.5rem;text-align:center}
+    .info-icon{font-size:1.75rem;margin-bottom:0.75rem}
+    .info-card h4{font-weight:600;margin-bottom:0.5rem;font-size:0.9375rem}
+    .info-card p{font-size:0.8125rem;color:rgba(255,255,255,0.4)}
+    
+    /* Error */
+    .error{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:1rem;margin-bottom:1.5rem;color:#f87171;font-size:0.875rem;display:none}
+    
+    /* Footer */
+    footer{border-top:1px solid rgba(255,255,255,0.05);margin-top:4rem;padding:2rem 0;text-align:center;color:rgba(255,255,255,0.25);font-size:0.8125rem}
+    
+    /* Responsive */
+    @media(max-width:768px){
+      .stats{grid-template-columns:repeat(2,1fr)}
+      .info-grid{grid-template-columns:1fr}
+      .hero h2{font-size:2.25rem}
+      .claims-grid{grid-template-columns:1fr}
+      .header-inner{padding:1rem}
+      .container{padding:1rem}
+    }
+  </style>
 </head>
 <body>
 <header>
-<div class="max-w">
-<div class="logo">
-<div class="logo-icon">T</div>
-<div class="logo-text"><h1>TruthOracle</h1><p>Decentralized Fact Verification</p></div>
-</div>
-<button id="connectBtn" class="btn btn-primary" onclick="connect()">Connect Wallet</button>
-</div>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">T</div>
+      <div><h1>TruthOracle</h1><span>Decentralized Fact Verification</span></div>
+    </div>
+    <button id="connectBtn" class="btn btn-primary" onclick="connect()">Connect Wallet</button>
+  </div>
 </header>
 
-<main class="max-w" style="padding-top:2rem">
-<div class="hero">
-<h2>Verify Anything with AI Consensus</h2>
-<p>Submit claims and our AI consensus mechanism will verify them using independent validator analysis.</p>
-</div>
+<main class="container">
+  <div class="hero">
+    <h2>Verify Anything with AI Consensus</h2>
+    <p>Submit claims and our AI consensus mechanism will verify them using independent validator analysis.</p>
+  </div>
 
-<div id="errorBox" class="error" style="display:none"></div>
+  <div id="errorBox" class="error"></div>
 
-<div class="card">
-<h3>Submit a Claim</h3>
-<input type="text" id="claimId" class="input" placeholder="Claim ID (unique identifier)">
-<textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
-<select id="claimCategory" class="input">
-<option value="General">General</option>
-<option value="Science">Science</option>
-<option value="News">News</option>
-<option value="Finance">Finance</option>
-<option value="Tech">Tech</option>
-<option value="Sports">Sports</option>
-</select>
-<button id="submitBtn" class="btn btn-gradient" style="width:100%;padding:0.75rem" onclick="submitClaim()" disabled>Connect Wallet to Submit</button>
-</div>
+  <div class="card">
+    <div class="card-title">Submit a Claim</div>
+    <input type="text" id="claimId" class="input" placeholder="Claim ID (unique identifier)">
+    <textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
+    <select id="claimCategory" class="input">
+      <option value="General">General</option>
+      <option value="Science">Science</option>
+      <option value="News">News</option>
+      <option value="Finance">Finance</option>
+      <option value="Tech">Tech</option>
+      <option value="Sports">Sports</option>
+    </select>
+    <button id="submitBtn" class="btn btn-gradient" style="width:100%;padding:0.875rem;font-size:0.9375rem" onclick="submitClaim()" disabled>Connect Wallet to Submit</button>
+  </div>
 
-<div class="card">
-<div class="claims-header">
-<h3>Claims</h3>
-<div class="filters">
-<input type="text" id="searchInput" class="input" placeholder="Search claims..." oninput="filterClaims()">
-<button class="filter-btn active" onclick="setFilter('all')">All</button>
-<button class="filter-btn" onclick="setFilter('pending')">Pending</button>
-<button class="filter-btn" onclick="setFilter('resolved')">Resolved</button>
-</div>
-</div>
-<div id="claimsList" class="claims-grid">
-<div class="empty">No claims yet. Submit the first one above!</div>
-</div>
-</div>
+  <div class="stats">
+    <div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total Claims</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#4ade80" id="statTrue">0</div><div class="stat-label">True</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#f87171" id="statFalse">0</div><div class="stat-label">False</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#facc15" id="statInconclusive">0</div><div class="stat-label">Inconclusive</div></div>
+  </div>
 
-<div class="stats">
-<div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total Claims</div></div>
-<div class="stat-card"><div class="stat-value" style="color:#4ade80" id="statTrue">0</div><div class="stat-label">True</div></div>
-<div class="stat-card"><div class="stat-value" style="color:#f87171" id="statFalse">0</div><div class="stat-label">False</div></div>
-<div class="stat-card"><div class="stat-value" style="color:#facc15" id="statInconclusive">0</div><div class="stat-label">Inconclusive</div></div>
-</div>
+  <div class="card">
+    <div class="claims-header">
+      <h3>Claims</h3>
+      <div class="filters">
+        <div class="search-box"><input type="text" id="searchInput" placeholder="Search..." oninput="filterClaims()"></div>
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setFilter('all')">All</button>
+          <button class="filter-btn" onclick="setFilter('pending')">Pending</button>
+          <button class="filter-btn" onclick="setFilter('resolved')">Resolved</button>
+        </div>
+      </div>
+    </div>
+    <div id="claimsList" class="claims-grid">
+      <div class="empty"><div class="empty-icon">📭</div>No claims yet. Submit the first one above!</div>
+    </div>
+  </div>
 
-<div class="info-grid">
-<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">🔍</div><h4>Independent Verification</h4><p>Multiple AI validators analyze claims independently</p></div>
-<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">🤝</div><h4>Consensus Mechanism</h4><p>Verdict reached when majority of validators agree</p></div>
-<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">⛓️</div><h4>On-Chain Record</h4><p>All claims and verdicts immutably stored on GenLayer</p></div>
-</div>
+  <div class="info-grid">
+    <div class="info-card"><div class="info-icon">🔍</div><h4>Independent Verification</h4><p>Multiple AI validators analyze claims independently</p></div>
+    <div class="info-card"><div class="info-icon">🤝</div><h4>Consensus Mechanism</h4><p>Verdict reached when majority of validators agree</p></div>
+    <div class="info-card"><div class="info-icon">⛓️</div><h4>On-Chain Record</h4><p>All claims and verdicts immutably stored on GenLayer</p></div>
+  </div>
 </main>
 
 <footer>TruthOracle — Built on GenLayer | Contract: 0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d</footer>
 
 <script>
 const CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
-const CONSENSUS = '0x0000000000000000000000000000000000000000';
 let provider, signer, account, claims = [], filter = 'all';
 
-async function connect() {
-  if (!window.ethereum) { alert('Please install MetaMask or Rabby'); return; }
-  try {
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    provider = new ethers.BrowserProvider(window.ethereum);
-    signer = await provider.getSigner();
-    account = await signer.getAddress();
-    document.getElementById('connectBtn').textContent = account.slice(0,6)+'...'+account.slice(-4);
-    document.getElementById('connectBtn').classList.remove('btn-primary');
-    document.getElementById('connectBtn').classList.add('btn-success');
-    document.getElementById('submitBtn').disabled = false;
-    document.getElementById('submitBtn').textContent = 'Submit Claim';
+function showError(msg){var e=document.getElementById('errorBox');e.textContent=msg;e.style.display='block';setTimeout(()=>e.style.display='none',5000)}
+
+async function connect(){
+  if(!window.ethereum){alert('Please install MetaMask or Rabby');return}
+  try{
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    provider=new ethers.BrowserProvider(window.ethereum);
+    signer=await provider.getSigner();
+    account=await signer.getAddress();
+    var btn=document.getElementById('connectBtn');
+    btn.textContent=account.slice(0,6)+'...'+account.slice(-4);
+    btn.className='btn btn-gradient';
+    document.getElementById('submitBtn').disabled=false;
+    document.getElementById('submitBtn').textContent='Submit Claim';
     await switchChain();
     await loadClaims();
-  } catch(e) { console.error(e); alert('Connection failed: '+e.message); }
+  }catch(e){console.error(e);showError('Connection failed: '+e.message)}
 }
 
-async function switchChain() {
-  try {
-    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x107D' }] });
-  } catch(e) {
-    if (e.code === 4902) {
-      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
-        chainId: '0x107D', chainName: 'GenLayer Bradbury Testnet',
-        rpcUrls: ['https://rpc-bradbury.genlayer.com'],
-        nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
-        blockExplorerUrls: ['https://explorer-bradbury.genlayer.com']
-      }]});
-    }
-  }
+async function switchChain(){
+  try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x107D'}]})}
+  catch(e){if(e.code===4902){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{
+    chainId:'0x107D',chainName:'GenLayer Bradbury Testnet',rpcUrls:['https://rpc-bradbury.genlayer.com'],
+    nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},blockExplorerUrls:['https://explorer-bradbury.genlayer.com']}]})}}
 }
 
-async function submitClaim() {
-  const id = document.getElementById('claimId').value;
-  const text = document.getElementById('claimText').value;
-  const category = document.getElementById('claimCategory').value;
-  if (!id || !text) { alert('Please fill all fields'); return; }
-  try {
-    const iface = new ethers.Interface(['function submit_claim(string,string,string)']);
-    const data = iface.encodeFunctionData('submit_claim', [id, text, category]);
-    const tx = await signer.sendTransaction({ to: CONTRACT, data, gasLimit: 500000n });
+async function submitClaim(){
+  var id=document.getElementById('claimId').value;
+  var text=document.getElementById('claimText').value;
+  var category=document.getElementById('claimCategory').value;
+  if(!id||!text){alert('Please fill all fields');return}
+  try{
+    var iface=new ethers.Interface(['function submit_claim(string,string,string)']);
+    var data=iface.encodeFunctionData('submit_claim',[id,text,category]);
+    var tx=await signer.sendTransaction({to:CONTRACT,data,gasLimit:500000n});
     await tx.wait();
-    document.getElementById('claimId').value = '';
-    document.getElementById('claimText').value = '';
-    alert('Claim submitted! TX: ' + tx.hash);
+    document.getElementById('claimId').value='';
+    document.getElementById('claimText').value='';
+    alert('Claim submitted! TX: '+tx.hash);
     await loadClaims();
-  } catch(e) { console.error(e); alert('Submit failed: '+e.message); }
+  }catch(e){console.error(e);showError('Submit failed: '+e.message)}
 }
 
-async function resolveClaim(id) {
-  try {
-    const iface = new ethers.Interface(['function resolve_claim(string)']);
-    const data = iface.encodeFunctionData('resolve_claim', [id]);
-    const tx = await signer.sendTransaction({ to: CONTRACT, data, gasLimit: 500000n });
+async function resolveClaim(id){
+  try{
+    var iface=new ethers.Interface(['function resolve_claim(string)']);
+    var data=iface.encodeFunctionData('resolve_claim',[id]);
+    var tx=await signer.sendTransaction({to:CONTRACT,data,gasLimit:500000n});
     await tx.wait();
     alert('Resolution sent! Waiting for AI consensus...');
-    setTimeout(loadClaims, 5000);
-  } catch(e) { console.error(e); alert('Resolve failed: '+e.message); }
+    setTimeout(loadClaims,5000);
+  }catch(e){console.error(e);showError('Resolve failed: '+e.message)}
 }
 
-async function loadClaims() {
-  if (!provider) return;
-  try {
-    const countIface = new ethers.Interface(['function get_claims_count() view returns (uint256)']);
-    const countData = countIface.encodeFunctionData('get_claims_count', []);
-    const countResult = await provider.call({ to: CONTRACT, data: countData });
-    const count = parseInt(countResult);
-    
-    const allClaims = [];
-    for (let i = 1; i <= Math.min(count, 50); i++) {
-      try {
-        const getIface = new ethers.Interface(['function get_claim(string) view returns (string)']);
-        const getData = getIface.encodeFunctionData('get_claim', ['claim-'+i]);
-        const result = await provider.call({ to: CONTRACT, data: getData });
-        const decoded = getIface.decodeFunctionResult('get_claim', result)[0];
-        const parsed = JSON.parse(decoded);
-        if (parsed.exists) allClaims.push(parsed);
-      } catch(e) {}
+async function loadClaims(){
+  if(!provider)return;
+  try{
+    var countIface=new ethers.Interface(['function get_claims_count() view returns (uint256)']);
+    var countResult=await provider.call({to:CONTRACT,data:countIface.encodeFunctionData('get_claims_count',[])});
+    var count=parseInt(countResult);
+    var allClaims=[];
+    for(var i=1;i<=Math.min(count,50);i++){
+      try{
+        var getIface=new ethers.Interface(['function get_claim(string) view returns (string)']);
+        var result=await provider.call({to:CONTRACT,data:getIface.encodeFunctionData('get_claim',['claim-'+i])});
+        var decoded=getIface.decodeFunctionResult('get_claim',result)[0];
+        var parsed=JSON.parse(decoded);
+        if(parsed.exists)allClaims.push(parsed);
+      }catch(e){}
     }
-    claims = allClaims;
+    claims=allClaims;
     renderClaims();
     updateStats();
-  } catch(e) { console.error('Load failed:', e); }
+  }catch(e){console.error('Load failed:',e);showError('Failed to load claims')}
 }
 
-function renderClaims() {
-  const list = document.getElementById('claimsList');
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  let filtered = claims;
-  if (filter === 'pending') filtered = claims.filter(c => !c.resolved);
-  if (filter === 'resolved') filtered = claims.filter(c => c.resolved);
-  if (search) filtered = filtered.filter(c => 
-    c.claim_id.toLowerCase().includes(search) || 
-    c.text?.toLowerCase().includes(search) ||
-    c.category?.toLowerCase().includes(search)
-  );
-  
-  if (filtered.length === 0) { list.innerHTML = '<div class="empty">No claims found</div>'; return; }
-  
-  list.innerHTML = filtered.map(c => `
+function renderClaims(){
+  var list=document.getElementById('claimsList');
+  var search=document.getElementById('searchInput').value.toLowerCase();
+  var filtered=claims;
+  if(filter==='pending')filtered=claims.filter(c=>!c.resolved);
+  if(filter==='resolved')filtered=claims.filter(c=>c.resolved);
+  if(search)filtered=filtered.filter(c=>c.claim_id.toLowerCase().includes(search)||(c.text||'').toLowerCase().includes(search)||(c.category||'').toLowerCase().includes(search));
+  if(filtered.length===0){list.innerHTML='<div class="empty"><div class="empty-icon">📭</div>No claims found</div>';return}
+  list.innerHTML=filtered.map(c=>`
     <div class="claim-card">
-      <div class="claim-header">
+      <div class="claim-top">
         <span class="claim-id">#${c.claim_id}</span>
-        ${c.resolved ? `<span class="verdict verdict-${c.verdict?.toLowerCase()}">${c.verdict}</span>` : ''}
+        ${c.resolved?`<span class="verdict verdict-${c.verdict?.toLowerCase()}">${c.verdict}</span>`:''}
       </div>
-      <p class="claim-text">${c.text || ''}</p>
-      ${c.category ? `<span class="category">${c.category}</span>` : ''}
-      ${c.resolved ? `
+      <p class="claim-text">${c.text||''}</p>
+      ${c.category?`<span class="category">${c.category}</span>`:''}
+      ${c.resolved?`
         <div class="claim-details">
-          <div class="claim-details-row">
-            <span>Confidence: ${c.confidence}%</span>
-            <span>Validators: ${c.validator_count}</span>
-          </div>
-          ${c.reasoning ? `<p class="claim-reasoning">${c.reasoning}</p>` : ''}
+          <div class="details-row"><span>Confidence</span><span>${c.confidence}%</span></div>
+          <div class="details-row"><span>Validators</span><span>${c.validator_count}</span></div>
+          ${c.reasoning?`<p class="reasoning">${c.reasoning}</p>`:''}
         </div>
-      ` : ''}
+      `:''}
       <div class="claim-footer">
-        <span class="claim-submitter">by ${c.submitter?.slice(0,6)}...${c.submitter?.slice(-4)}</span>
-        ${!c.resolved ? `<button class="resolve-btn" onclick="resolveClaim('${c.claim_id}')">Resolve</button>` : ''}
+        <span class="claim-submitter">${c.submitter?.slice(0,6)}...${c.submitter?.slice(-4)}</span>
+        ${!c.resolved?`<button class="resolve-btn" onclick="resolveClaim('${c.claim_id}')">Resolve</button>`:''}
       </div>
-      <div class="claim-time">${c.timestamp ? new Date(c.timestamp*1000).toLocaleString() : ''}</div>
+      <div class="claim-time" style="margin-top:0.5rem">${c.timestamp?new Date(c.timestamp*1000).toLocaleString():''}</div>
     </div>
   `).join('');
 }
 
-function updateStats() {
-  document.getElementById('statTotal').textContent = claims.length;
-  document.getElementById('statTrue').textContent = claims.filter(c => c.verdict === 'TRUE').length;
-  document.getElementById('statFalse').textContent = claims.filter(c => c.verdict === 'FALSE').length;
-  document.getElementById('statInconclusive').textContent = claims.filter(c => c.verdict === 'INCONCLUSIVE').length;
+function updateStats(){
+  document.getElementById('statTotal').textContent=claims.length;
+  document.getElementById('statTrue').textContent=claims.filter(c=>c.verdict==='TRUE').length;
+  document.getElementById('statFalse').textContent=claims.filter(c=>c.verdict==='FALSE').length;
+  document.getElementById('statInconclusive').textContent=claims.filter(c=>c.verdict==='INCONCLUSIVE').length;
 }
 
-function setFilter(f) {
-  filter = f;
-  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+function setFilter(f){
+  filter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   event.target.classList.add('active');
   renderClaims();
 }
 
-function filterClaims() { renderClaims(); }
+function filterClaims(){renderClaims()}
 </script>
 <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
 </body>
