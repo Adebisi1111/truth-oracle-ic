@@ -165,20 +165,35 @@ import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
 
 const CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
 let client, signer, account, claims = [], filter = 'all';
-
+// Load saved claim IDs from localStorage
 function loadSavedClaims() {
   try {
-    var saved = localStorage.getItem('truthoracle_claims');
-    if (saved) claims = JSON.parse(saved);
+    var saved = localStorage.getItem('truthoracle_claim_ids');
+    if (saved) {
+      var ids = JSON.parse(saved);
+      // Return array of {id, ...} objects for backward compatibility
+      return ids.map(function(id) { return { claim_id: id, exists: false }; });
+    }
   } catch(e) {}
+  return [];
 }
 
-function saveClaims() {
+// Save claim ID to localStorage
+function saveClaimId(id) {
   try {
-    localStorage.setItem('truthoracle_claims', JSON.stringify(claims));
+    var ids = JSON.parse(localStorage.getItem('truthoracle_claim_ids') || '[]');
+    if (ids.indexOf(id) === -1) ids.push(id);
+    localStorage.setItem('truthoracle_claim_ids', JSON.stringify(ids));
   } catch(e) {}
 }
 
+// Get all saved claim IDs
+function getSavedIds() {
+  try {
+    return JSON.parse(localStorage.getItem('truthoracle_claim_ids') || '[]');
+  } catch(e) {}
+  return [];
+}
 function showError(msg){var e=document.getElementById('errorBox');e.textContent=msg;e.style.display='block';setTimeout(()=>e.style.display='none',5000)}
 
 async function connect(){
@@ -200,8 +215,7 @@ async function connect(){
     document.getElementById('submitBtn').disabled=false;
     document.getElementById('submitBtn').textContent='Submit Claim';
     await switchChain();
-    renderClaims();
-    updateStats();
+    await loadClaimsByIds();
   }catch(e){console.error(e);showError('Connection failed: '+e.message)}
 }
 
@@ -225,6 +239,9 @@ async function submitClaim(){
       value: 0
     }));
     
+    // Save the actual claim ID
+    saveClaimId(id);
+    
     // Add to local claims immediately
     var newClaim = {
       claim_id: id,
@@ -242,7 +259,6 @@ async function submitClaim(){
       appeal_count: 0
     };
     claims = [newClaim, ...claims];
-    saveClaims();
     
     document.getElementById('claimId').value='';
     document.getElementById('claimText').value='';
@@ -322,6 +338,7 @@ async function lookupClaim(){
     if(data && data !== 'undefined'){
       var parsed = JSON.parse(data);
       if(parsed.exists){
+        saveClaimId(id);
         var existing=claims.find(c=>c.claim_id===id);
         if(existing){
           claims=claims.map(c=>c.claim_id===id?parsed:c);
@@ -395,8 +412,31 @@ function setFilter(f){
 
 function filterClaims(){renderClaims()}
 
-// Load saved claims on page load
-loadSavedClaims();
+// Load claims by their actual IDs from blockchain
+async function loadClaimsByIds() {
+  var ids = getSavedIds();
+  var allClaims = [];
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      var result = await client.readContract({
+        address: CONTRACT,
+        functionName: 'get_claim',
+        args: [ids[i]],
+        stateStatus: 'accepted'
+      });
+      var data = result?.data ?? result;
+      if (data && data !== 'undefined') {
+        try {
+          var parsed = JSON.parse(data);
+          if (parsed.exists) allClaims.push(parsed);
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+  claims = allClaims;
+  renderClaims();
+  updateStats();
+}
 </script>
 </body>
 </html>
