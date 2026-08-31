@@ -160,8 +160,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@genlayer-js/index.js/+esm';
-import { testnetBradbury } from 'https://cdn.jsdelivr.net/npm/@genlayer-js/chains.js/+esm';
+import { createClient } from 'https://esm.sh/genlayer-js@1.1.8';
+import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
 
 const CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
 let client, signer, account, claims = [], filter = 'all';
@@ -185,7 +185,8 @@ async function connect(){
   if(!window.ethereum){alert('Please install MetaMask or Rabby');return}
   try{
     await window.ethereum.request({method:'eth_requestAccounts'});
-    signer = new ethers.providers.Web3Provider(window.ethereum).getSigner();
+    var ethProvider = new window.ethers.providers.Web3Provider(window.ethereum);
+    signer = await ethProvider.getSigner();
     account = await signer.getAddress();
     
     client = createClient({
@@ -314,6 +315,14 @@ async function lookupClaim(){
     }
   }catch(e){console.error(e);showError('Lookup failed: '+e.message)}
 }
+
+// Expose functions to window for onclick
+window.connect = connect;
+window.submitClaim = submitClaim;
+window.resolveClaim = resolveClaim;
+window.lookupClaim = lookupClaim;
+window.setFilter = setFilter;
+window.filterClaims = filterClaims;
 
 function renderClaims(){
   var list=document.getElementById('claimsList');
