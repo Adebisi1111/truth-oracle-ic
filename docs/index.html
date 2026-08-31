@@ -3,34 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TruthOracle — Decentralized Fact Verification</title>
+  <title>TruthOracle - Decentralized Fact Verification</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
-    .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
-    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #ff6b35, #f7c59f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .subtitle { color: #888; margin-bottom: 2rem; font-size: 1.1rem; }
-    .card { background: #1a1a1a; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #333; }
-    .card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #ff6b35; }
-    input, textarea { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; color: #fff; font-size: 1rem; margin-bottom: 0.75rem; }
-    input:focus, textarea:focus { outline: none; border-color: #ff6b35; }
-    button { background: linear-gradient(135deg, #ff6b35, #e85d2a); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .status { padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.9rem; }
-    .status.success { background: #1a3a1a; border: 1px solid #2d5a2d; color: #7fff7f; }
-    .status.error { background: #3a1a1a; border: 1px solid #5a2d2d; color: #ff7f7f; }
-    .status.info { background: #1a1a3a; border: 1px solid #2d2d5a; color: #7f7fff; }
-    .verdict { font-size: 1.5rem; font-weight: bold; text-align: center; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
-    .verdict.TRUE { background: #1a3a1a; color: #7fff7f; }
-    .verdict.FALSE { background: #3a1a1a; color: #ff7f7f; }
-    .verdict.INCONCLUSIVE { background: #3a3a1a; color: #ffff7f; }
-    .wallet-info { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
-    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-    .tab { padding: 0.5rem 1rem; border-radius: 8px; background: #1a1a1a; border: 1px solid #333; cursor: pointer; }
-    .tab.active { background: #ff6b35; border-color: #ff6b35; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh}
+    .container{max-width:800px;margin:0 auto;padding:2rem}
+    h1{font-size:2.5rem;margin-bottom:.5rem;background:linear-gradient(135deg,#ff6b35,#f7c59f);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .subtitle{color:#888;margin-bottom:2rem;font-size:1.1rem}
+    .card{background:#1a1a1a;border-radius:12px;padding:1.5rem;margin-bottom:1.5rem;border:1px solid #333}
+    .card h2{font-size:1.2rem;margin-bottom:1rem;color:#ff6b35}
+    input,textarea{width:100%;padding:.75rem;border-radius:8px;border:1px solid #333;background:#0a0a0a;color:#fff;font-size:1rem;margin-bottom:.75rem}
+    input:focus,textarea:focus{outline:none;border-color:#ff6b35}
+    button{background:linear-gradient(135deg,#ff6b35,#e85d2a);color:#fff;border:none;padding:.75rem 1.5rem;border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600}
+    button:hover{opacity:.9}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .status{padding:.75rem;border-radius:8px;margin-top:.75rem;font-size:.9rem}
+    .status.success{background:#1a3a1a;border:1px solid #2d5a2d;color:#7fff7f}
+    .status.error{background:#3a1a1a;border:1px solid #5a2d2d;color:#ff7f7f}
+    .status.info{background:#1a1a3a;border:1px solid #2d2d5a;color:#7f7fff}
+    .verdict{font-size:1.5rem;font-weight:bold;text-align:center;padding:1rem;border-radius:8px;margin-top:1rem}
+    .verdict.TRUE{background:#1a3a1a;color:#7fff7f}
+    .verdict.FALSE{background:#3a1a1a;color:#ff7f7f}
+    .verdict.INCONCLUSIVE{background:#3a3a1a;color:#ffff7f}
+    .wallet-info{font-size:.85rem;color:#888;margin-top:.5rem}
+    .tabs{display:flex;gap:.5rem;margin-bottom:1.5rem}
+    .tab{padding:.5rem 1rem;border-radius:8px;background:#1a1a1a;border:1px solid #333;cursor:pointer}
+    .tab.active{background:#ff6b35;border-color:#ff6b35}
+    .tab-content{display:none}
+    .tab-content.active{display:block}
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th,td{padding:.75rem;text-align:left;border-bottom:1px solid #333}
+    th{color:#ff6b35;font-size:.9rem}
+    .refresh-btn{background:none;border:1px solid #333;color:#888;padding:.5rem 1rem;border-radius:6px;cursor:pointer;font-size:.85rem}
+    .refresh-btn:hover{border-color:#ff6b35;color:#ff6b35}
   </style>
 </head>
 <body>
@@ -38,9 +43,14 @@
     <h1>TruthOracle</h1>
     <p class="subtitle">Decentralized Fact Verification with AI Consensus</p>
     
+    <div class="wallet-info" style="text-align:right;margin-bottom:1rem">
+      <button onclick="connectWallet()" id="connectBtn" style="background:#333;color:#fff;border:1px solid #555;padding:.5rem 1rem;border-radius:6px;cursor:pointer">Connect Wallet</button>
+      <span id="walletAddress" style="margin-left:1rem;font-size:.85rem"></span>
+    </div>
+    
     <div class="tabs">
-      <div class="tab active" onclick="showTab('submit')">Submit Claim</div>
-      <div class="tab" onclick="showTab('claims')">All Claims</div>
+      <div class="tab active" onclick="showTab('submit')">Submit</div>
+      <div class="tab" onclick="showTab('claims')">Claims</div>
       <div class="tab" onclick="showTab('about')">About</div>
     </div>
     
@@ -52,7 +62,6 @@
         <button onclick="submitClaim()" id="submitBtn">Submit Claim</button>
         <div id="submitStatus"></div>
       </div>
-      
       <div class="card">
         <h2>Resolve Claim</h2>
         <input type="text" id="resolveClaimId" placeholder="Claim ID to resolve">
@@ -65,137 +74,178 @@
     <div id="claims" class="tab-content">
       <div class="card">
         <h2>All Claims</h2>
-        <button onclick="loadClaims()" id="loadBtn">Refresh Claims</button>
-        <div id="claimsList" style="margin-top: 1rem;"></div>
+        <button onclick="loadClaims()" class="refresh-btn">Refresh</button>
+        <div id="claimsList" style="margin-top:1rem;"></div>
       </div>
     </div>
     
     <div id="about" class="tab-content">
       <div class="card">
         <h2>About TruthOracle</h2>
-        <p style="color: #ccc; line-height: 1.6;">
-          TruthOracle is a decentralized fact verification protocol built on GenLayer.
-          Submit claims, and our AI consensus mechanism will verify them using
-          independent validator analysis.
-        </p>
-        <p style="color: #ccc; line-height: 1.6; margin-top: 1rem;">
+        <p style="color:#ccc;line-height:1.6">TruthOracle is a decentralized fact verification protocol built on GenLayer. Submit claims and our AI consensus mechanism will verify them using independent validator analysis.</p>
+        <p style="color:#ccc;line-height:1.6;margin-top:1rem">
           <strong>Contract:</strong> <code>0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2</code><br>
           <strong>Network:</strong> GenLayer Bradbury Testnet<br>
           <strong>Consensus:</strong> prompt_comparative (AI-powered)
         </p>
       </div>
     </div>
-    
-    <div class="wallet-info">
-      <button onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
-      <span id="walletAddress" style="margin-left: 1rem;"></span>
-    </div>
   </div>
   
-  <script>
-    // TruthOracle dApp - Pure JavaScript, no external dependencies
+  <script type="module">
+    import { ethers } from 'https://esm.sh/ethers@6.13.7';
+    
     const CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
     const CONSENSUS = '0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D';
     const RPC = 'https://rpc-bradbury.genlayer.com';
+    const CHAIN_ID = 0x1065; // 4213
+    
+    let signer = null;
+    let provider = null;
     let account = null;
-
+    
     function getProvider() {
       if (window.ethereum) return window.ethereum;
       return null;
     }
-
+    
     async function connectWallet() {
-      const provider = getProvider();
-      if (!provider) {
-        showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
-        return;
-      }
       try {
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        if (!accounts || accounts.length === 0) {
-          showStatus('submitStatus', 'No accounts found. Please unlock your wallet.', 'error');
+        const ethProvider = getProvider();
+        if (!ethProvider) {
+          showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
           return;
         }
-        account = accounts[0];
+        
+        // Request account access
+        await ethProvider.request({ method: 'eth_requestAccounts' });
+        
+        // Create ethers browser provider
+        provider = new ethers.BrowserProvider(ethProvider);
+        signer = await provider.getSigner();
+        account = await signer.getAddress();
+        
         document.getElementById('walletAddress').textContent = account.slice(0,6)+'...'+account.slice(-4);
         document.getElementById('connectBtn').textContent = 'Connected';
         showStatus('submitStatus', 'Connected: ' + account.slice(0,6) + '...', 'success');
+        
       } catch (err) {
-        showStatus('submitStatus', 'Error: ' + err.message, 'error');
+        console.error('Connection error:', err);
+        if (err.code === 4001) {
+          showStatus('submitStatus', 'Connection rejected.', 'error');
+        } else {
+          showStatus('submitStatus', 'Error: ' + err.message, 'error');
+        }
       }
     }
-
+    
     async function submitClaim() {
-      if (!account) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
+      if (!signer) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('claimId').value;
       const text = document.getElementById('claimText').value;
       if (!claimId || !text) { showStatus('submitStatus', 'Fill all fields', 'error'); return; }
+      
       try {
         document.getElementById('submitBtn').disabled = true;
         showStatus('submitStatus', 'Submitting...', 'info');
-        const provider = getProvider();
-        // Encode: submit_claim(string claimId, string text)
-        const selector = '0x4f6e982b';
-        const data = selector + stringParam(claimId) + stringParam(text);
-        const txHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: account, to: CONSENSUS, data: data, value: '0x0' }]
+        
+        // Encode function call
+        const iface = new ethers.Interface(['function submit_claim(string claimId, string text)']);
+        const data = iface.encodeFunctionData('submit_claim', [claimId, text]);
+        
+        const tx = await signer.sendTransaction({
+          to: CONTRACT,
+          data: data,
+          gasLimit: 500000n
         });
-        showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'success');
+        
+        showStatus('submitStatus', 'Submitted! TX: ' + tx.hash.slice(0,20) + '...', 'success');
+        
+        // Wait for receipt
+        const receipt = await tx.wait();
+        if (receipt && receipt.status === 1) {
+          showStatus('submitStatus', 'Confirmed! Block: ' + receipt.blockNumber, 'success');
+        }
       } catch (err) {
         showStatus('submitStatus', 'Error: ' + err.message, 'error');
       }
       document.getElementById('submitBtn').disabled = false;
     }
-
+    
     async function resolveClaim() {
-      if (!account) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
+      if (!signer) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('resolveClaimId').value;
       if (!claimId) { showStatus('resolveStatus', 'Enter claim ID', 'error'); return; }
+      
       try {
         document.getElementById('resolveBtn').disabled = true;
         showStatus('resolveStatus', 'Running AI consensus...', 'info');
-        const provider = getProvider();
-        // Encode: resolve_claim(string claimId)
-        const selector = '0x3d18d4d8';
-        const data = selector + stringParam(claimId);
-        const txHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: account, to: CONSENSUS, data: data, value: '0x0' }]
+        
+        const iface = new ethers.Interface(['function resolve_claim(string claimId)']);
+        const data = iface.encodeFunctionData('resolve_claim', [claimId]);
+        
+        const tx = await signer.sendTransaction({
+          to: CONTRACT,
+          data: data,
+          gasLimit: 500000n
         });
-        showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'success');
+        
+        showStatus('resolveStatus', 'Resolved! TX: ' + tx.hash.slice(0,20) + '...', 'success');
+        
+        // Wait and fetch result
+        await tx.wait();
+        setTimeout(() => loadClaim(claimId), 2000);
       } catch (err) {
         showStatus('resolveStatus', 'Error: ' + err.message, 'error');
       }
       document.getElementById('resolveBtn').disabled = false;
     }
-
+    
     async function loadClaims() {
-      if (!account) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
+      if (!provider) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
       try {
-        const provider = getProvider();
-        const selector = '0x2e4a6e1a';
-        const result = await provider.request({
-          method: 'eth_call',
-          params: [{ from: account, to: CONTRACT, data: selector }, 'latest']
+        const iface = new ethers.Interface(['function get_claims_count() view returns (uint256)']);
+        const data = iface.encodeFunctionData('get_claims_count', []);
+        
+        const result = await provider.call({
+          to: CONTRACT,
+          data: data
         });
-        const count = parseInt(result, 16);
+        
+        const count = Number(ethers.toBigInt(result));
         document.getElementById('claimsList').innerHTML = '<p style="color:#888">Total claims: ' + count + '</p>';
       } catch (err) {
         document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Error loading claims</p>';
       }
     }
-
-    function stringParam(str) {
-      const hex = Array.from(str).map(c => c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
-      const len = hex.length / 2;
-      return len.toString(16).padStart(64,'0') + hex.padEnd(64,'0');
+    
+    async function loadClaim(claimId) {
+      if (!provider) return;
+      try {
+        const iface = new ethers.Interface(['function get_claim(string claimId) view returns (string)']);
+        const data = iface.encodeFunctionData('get_claim', [claimId]);
+        
+        const result = await provider.call({
+          to: CONTRACT,
+          data: data
+        });
+        
+        const claimStr = ethers.AbiCoder.defaultAbiCoder().decode(['string'], result)[0];
+        const claim = JSON.parse(claimStr);
+        
+        if (claim.exists && claim.resolved) {
+          document.getElementById('verdictResult').innerHTML = 
+            '<div class="verdict ' + claim.verdict + '">' + claim.verdict + '</div>';
+        }
+      } catch (err) {
+        console.error('Load claim error:', err);
+      }
     }
-
+    
     function showStatus(id, msg, type) {
       document.getElementById(id).innerHTML = '<div class="status ' + type + '">' + msg + '</div>';
     }
-
+    
     function showTab(tab) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
