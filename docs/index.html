@@ -115,12 +115,11 @@
         
         account = accounts[0];
         
-        // Create genlayer client with the connected account address
+        // Create genlayer client with the MetaMask address
         // MetaMask will handle signing
-        const acc = createAccount();
         client = createClient({ 
           chain: testnetBradbury,
-          account: acc
+          account: account
         });
         
         document.getElementById('walletAddress').textContent = account;
