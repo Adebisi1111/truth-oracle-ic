@@ -218,12 +218,12 @@ async function submitClaim(){
   var category=document.getElementById('claimCategory').value;
   if(!id||!text){alert('Please fill all fields');return}
   try{
-    var txHash = await client.writeContract({
+    var txHash = await withRetry(() => client.writeContract({
       address: CONTRACT,
       functionName: 'submit_claim',
       args: [id, text, category],
       value: 0
-    });
+    }));
     
     // Add to local claims immediately
     var newClaim = {
@@ -252,14 +252,36 @@ async function submitClaim(){
   }catch(e){console.error(e);showError('Submit failed: '+e.message)}
 }
 
+// Retry wrapper for rate limiting
+async function withRetry(fn, maxAttempts) {
+  var attempts = 0;
+  var delay = 4000;
+  while (attempts < maxAttempts) {
+    try {
+      return await fn();
+    } catch (e) {
+      var msg = (e && e.message) || '';
+      if (msg.indexOf('-32005') !== -1 || msg.indexOf('rate limit') !== -1) {
+        attempts++;
+        console.warn('Retry ' + attempts + '/' + maxAttempts + ' after ' + delay + 'ms');
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('Too many retries');
+}
+
 async function resolveClaim(id){
   try{
-    var txHash = await client.writeContract({
+    var txHash = await withRetry(() => client.writeContract({
       address: CONTRACT,
       functionName: 'resolve_claim',
       args: [id],
       value: 0
-    });
+    }));
     alert('Resolution sent! Waiting for AI consensus...');
     setTimeout(function() { refreshClaim(id); }, 5000);
   }catch(e){console.error(e);showError('Resolve failed: '+e.message)}
