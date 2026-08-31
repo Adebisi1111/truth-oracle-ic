@@ -4,18 +4,24 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 import { createClient, createAccount } from 'genlayer-js';
 import { testnetBradbury } from 'genlayer-js/chains';
 
-const CONTRACT_ADDRESS = '0xA8c8986bd62AD9dD7445232213Eb5C03adE31D7d';
+// Declare window.ethereum for TypeScript
+declare global {
+  interface Window {
+    ethereum?: any;
+    rabby?: any;
+  }
+}
+
+const CONTRACT_ADDRESS = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
 
 interface Claim {
   claim_id: string;
   exists: boolean;
   text?: string;
-  evidence_url?: string;
   submitter?: string;
   timestamp?: number;
   resolved?: boolean;
   verdict?: string;
-  consensus_rounds?: number;
 }
 
 interface GenLayerContextType {
@@ -25,7 +31,7 @@ interface GenLayerContextType {
   connecting: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
-  submitClaim: (claimId: string, text: string, evidenceUrl: string) => Promise<string>;
+  submitClaim: (claimId: string, text: string) => Promise<string>;
   resolveClaim: (claimId: string) => Promise<string>;
   getClaim: (claimId: string) => Promise<Claim>;
   getClaimsCount: () => Promise<number>;
@@ -46,6 +52,16 @@ const GenLayerContext = createContext<GenLayerContextType>({
 
 export const useGenLayer = () => useContext(GenLayerContext);
 
+// Detect wallet type
+function detectWallet() {
+  if (typeof window === 'undefined') return 'none';
+  if (window.rabby) return 'rabby';
+  if (window.ethereum?.isRabby) return 'rabby';
+  if (window.ethereum?.isMetaMask) return 'metamask';
+  if (window.ethereum) return 'unknown';
+  return 'none';
+}
+
 export function GenLayerProvider({ children }: { children: ReactNode }) {
   const [client, setClient] = useState<any>(null);
   const [account, setAccount] = useState<string | null>(null);
@@ -55,24 +71,54 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
   const connect = async () => {
     setConnecting(true);
     try {
-      // Create client with testnet bradbury
+      const wallet = detectWallet();
+      
+      if (wallet === 'none') {
+        alert('No wallet detected. Please install MetaMask or Rabby wallet extension.');
+        setConnecting(false);
+        return;
+      }
+
+      // Get the provider (Rabby and MetaMask both use window.ethereum)
+      const provider = window.rabby?.provider || window.ethereum;
+      
+      if (!provider) {
+        alert('Wallet provider not found. Please make sure your wallet is unlocked.');
+        setConnecting(false);
+        return;
+      }
+
+      // Request account access
+      const accounts = await provider.request({ 
+        method: 'eth_requestAccounts' 
+      });
+      
+      if (!accounts || accounts.length === 0) {
+        alert('No accounts found. Please unlock your wallet.');
+        setConnecting(false);
+        return;
+      }
+      
+      const addr = accounts[0];
+      
+      // Create genlayer client with the wallet address
       const newClient = createClient({
         chain: testnetBradbury,
+        account: addr
       });
-
-      // Connect wallet (MetaMask)
-      await newClient.connect();
-
-      // Get account
-      const accounts = await newClient.getAddresses();
-      const addr = accounts[0] || null;
 
       setClient(newClient);
       setAccount(addr);
       setConnected(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Connection failed:', err);
-      alert('Connection failed. Make sure MetaMask is installed and unlocked.');
+      if (err.code === 4001) {
+        alert('Connection rejected by user.');
+      } else if (err.code === -32002) {
+        alert('Connection request already pending. Please check your wallet.');
+      } else {
+        alert('Connection failed: ' + (err.message || 'Unknown error'));
+      }
     }
     setConnecting(false);
   };
@@ -83,19 +129,14 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
     setConnected(false);
   };
 
-  const submitClaim = async (claimId: string, text: string, evidenceUrl: string): Promise<string> => {
+  const submitClaim = async (claimId: string, text: string): Promise<string> => {
     if (!client || !connected) throw new Error('Not connected');
     
     const txHash = await client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: 'submit_claim',
-      args: [claimId, text, evidenceUrl],
+      args: [claimId, text],
       value: 0,
-    });
-
-    const receipt = await client.waitForTransactionReceipt({
-      hash: txHash,
-      status: 'ACCEPTED',
     });
 
     return txHash;
@@ -109,11 +150,6 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
       functionName: 'resolve_claim',
       args: [claimId],
       value: 0,
-    });
-
-    const receipt = await client.waitForTransactionReceipt({
-      hash: txHash,
-      status: 'ACCEPTED',
     });
 
     return txHash;

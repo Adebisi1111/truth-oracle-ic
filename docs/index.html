@@ -100,24 +100,50 @@
     let client = null;
     let account = null;
     
+    // Detect wallet provider (MetaMask, Rabby, etc.)
+    function getWalletProvider() {
+      // Check for Rabby first
+      if (window.rabby?.provider) {
+        return window.rabby.provider;
+      }
+      // Check for Rabby via ethereum
+      if (window.ethereum?.isRabby) {
+        return window.ethereum;
+      }
+      // Check for MetaMask
+      if (window.ethereum?.isMetaMask) {
+        return window.ethereum;
+      }
+      // Generic ethereum provider
+      if (window.ethereum) {
+        return window.ethereum;
+      }
+      return null;
+    }
+    
     window.connectWallet = async () => {
       try {
-        // Check if MetaMask is installed
-        if (typeof window.ethereum === 'undefined') {
-          showStatus('submitStatus', 'MetaMask not detected. Please install MetaMask extension.', 'error');
+        const provider = getWalletProvider();
+        
+        if (!provider) {
+          showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby wallet extension.', 'error');
           return;
         }
         
-        // Request account access using standard EIP-1193
-        const accounts = await window.ethereum.request({ 
+        // Request account access
+        const accounts = await provider.request({ 
           method: 'eth_requestAccounts' 
         });
         
+        if (!accounts || accounts.length === 0) {
+          showStatus('submitStatus', 'No accounts found. Please unlock your wallet.', 'error');
+          return;
+        }
+        
         account = accounts[0];
         
-        // Create genlayer client with the MetaMask address
-        // MetaMask will handle signing
-        client = createClient({ 
+        // Create genlayer client with the wallet address
+        client = createClient({
           chain: testnetBradbury,
           account: account
         });
@@ -129,8 +155,10 @@
       } catch (err) {
         if (err.code === 4001) {
           showStatus('submitStatus', 'Connection rejected by user.', 'error');
+        } else if (err.code === -32002) {
+          showStatus('submitStatus', 'Connection request already pending. Please check your wallet.', 'error');
         } else {
-          showStatus('submitStatus', 'Connection failed: ' + err.message, 'error');
+          showStatus('submitStatus', 'Connection failed: ' + (err.message || 'Unknown error'), 'error');
         }
       }
     };

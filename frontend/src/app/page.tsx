@@ -1,30 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGenLayer } from '@/context/GenLayerContext';
 
-const CONTRACT_ADDRESS = '0xA8c8986bd62AD9dD7445232213Eb5C03adE31D7d';
+const CONTRACT_ADDRESS = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
 
 interface Claim {
   claim_id: string;
   exists: boolean;
   text?: string;
-  evidence_url?: string;
   submitter?: string;
   timestamp?: number;
   resolved?: boolean;
   verdict?: string;
-  consensus_rounds?: number;
 }
 
 export default function Home() {
-  const { account, connected, connecting, connect, disconnect, submitClaim, resolveClaim, getClaim, getClaimsCount } = useGenLayer();
+  const { account, connected, connecting, connect, submitClaim, resolveClaim, getClaim } = useGenLayer();
   
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(false);
   const [claimId, setClaimId] = useState('');
   const [claimText, setClaimText] = useState('');
-  const [evidenceUrl, setEvidenceUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmitClaim = async () => {
@@ -32,7 +29,7 @@ export default function Home() {
       alert('Please connect wallet first');
       return;
     }
-    if (!claimId || !claimText || !evidenceUrl) {
+    if (!claimId || !claimText) {
       alert('Please fill all fields');
       return;
     }
@@ -40,7 +37,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const txHash = await submitClaim(claimId, claimText, evidenceUrl);
+      const txHash = await submitClaim(claimId, claimText);
       
       // Fetch the newly created claim
       const newClaim = await getClaim(claimId);
@@ -49,7 +46,6 @@ export default function Home() {
       // Clear form
       setClaimId('');
       setClaimText('');
-      setEvidenceUrl('');
       
       alert(`Claim submitted! TX: ${txHash}`);
     } catch (err: any) {
@@ -90,6 +86,33 @@ export default function Home() {
     }
   };
 
+  const loadClaim = async (id: string) => {
+    if (!connected) {
+      alert('Please connect wallet first');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const claim = await getClaim(id);
+      if (claim.exists) {
+        // Check if claim already in list
+        const existing = claims.find(c => c.claim_id === id);
+        if (existing) {
+          setClaims(claims.map(c => c.claim_id === id ? claim : c));
+        } else {
+          setClaims([claim, ...claims]);
+        }
+      } else {
+        alert('Claim not found');
+      }
+    } catch (err: any) {
+      console.error('Load failed:', err);
+      setError(err.message || 'Load failed');
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
@@ -105,8 +128,8 @@ export default function Home() {
             </div>
           </div>
           <button
-            onClick={connected ? disconnect : connect}
-            disabled={connecting}
+            onClick={connect}
+            disabled={connecting || connected}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
               connected
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
@@ -129,8 +152,8 @@ export default function Home() {
             Verify Anything with AI Consensus
           </h2>
           <p className="text-white/60 text-lg max-w-2xl mx-auto">
-            Submit claims with evidence URLs. Independent AI validators fetch and analyze
-            the evidence, then reach consensus on whether it's true, false, or inconclusive.
+            Submit claims and our AI consensus mechanism will verify them using
+            independent validator analysis.
           </p>
         </div>
 
@@ -153,18 +176,11 @@ export default function Home() {
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
             />
             <textarea
-              placeholder="Enter your claim (e.g., 'Company X announced product Y on date Z')"
+              placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"
               value={claimText}
               onChange={(e) => setClaimText(e.target.value)}
               rows={3}
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500 resize-none"
-            />
-            <input
-              type="url"
-              placeholder="Evidence URL (e.g., https://example.com/article)"
-              value={evidenceUrl}
-              onChange={(e) => setEvidenceUrl(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
             />
             <button
               onClick={handleSubmitClaim}
@@ -172,6 +188,29 @@ export default function Home() {
               className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               {loading ? 'Submitting...' : connected ? 'Submit Claim' : 'Connect Wallet to Submit'}
+            </button>
+          </div>
+        </div>
+
+        {/* Lookup Claim */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 mb-8">
+          <h3 className="text-white font-semibold text-lg mb-4">Lookup Claim</h3>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              placeholder="Enter claim ID to lookup"
+              id="lookupClaimId"
+              className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
+            />
+            <button
+              onClick={() => {
+                const id = (document.getElementById('lookupClaimId') as HTMLInputElement).value;
+                if (id) loadClaim(id);
+              }}
+              disabled={loading || !connected}
+              className="px-6 py-3 rounded-lg bg-purple-500/20 text-purple-400 font-medium hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+            >
+              Lookup
             </button>
           </div>
         </div>
@@ -215,14 +254,6 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-xs text-white/40">
-                  <a
-                    href={claim.evidence_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-white/60 truncate max-w-xs"
-                  >
-                    🔗 {claim.evidence_url}
-                  </a>
                   <span>by {claim.submitter?.slice(0, 6)}...{claim.submitter?.slice(-4)}</span>
                   <span>{claim.timestamp ? new Date(claim.timestamp * 1000).toLocaleString() : ''}</span>
                 </div>
@@ -236,7 +267,7 @@ export default function Home() {
           <div className="bg-white/5 border border-white/10 rounded-xl p-5">
             <div className="text-2xl mb-2">🔍</div>
             <h4 className="text-white font-medium mb-1">Independent Verification</h4>
-            <p className="text-white/40 text-sm">Multiple AI validators fetch and analyze evidence independently</p>
+            <p className="text-white/40 text-sm">Multiple AI validators analyze claims independently</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-5">
             <div className="text-2xl mb-2">🤝</div>
