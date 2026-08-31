@@ -31,11 +31,6 @@
     .tab.active{background:#ff6b35;border-color:#ff6b35}
     .tab-content{display:none}
     .tab-content.active{display:block}
-    table{width:100%;border-collapse:collapse;margin-top:1rem}
-    th,td{padding:.75rem;text-align:left;border-bottom:1px solid #333}
-    th{color:#ff6b35;font-size:.9rem}
-    .refresh-btn{background:none;border:1px solid #333;color:#888;padding:.5rem 1rem;border-radius:6px;cursor:pointer;font-size:.85rem}
-    .refresh-btn:hover{border-color:#ff6b35;color:#ff6b35}
   </style>
 </head>
 <body>
@@ -44,14 +39,14 @@
     <p class="subtitle">Decentralized Fact Verification with AI Consensus</p>
     
     <div class="wallet-info" style="text-align:right;margin-bottom:1rem">
-      <button id="connectBtn" style="background:#333;color:#fff;border:1px solid #555;padding:.5rem 1rem;border-radius:6px;cursor:pointer">Connect Wallet</button>
+      <button onclick="connectWallet()">Connect Wallet</button>
       <span id="walletAddress" style="margin-left:1rem;font-size:.85rem"></span>
     </div>
     
     <div class="tabs">
-      <div class="tab active" data-tab="submit">Submit</div>
-      <div class="tab" data-tab="claims">Claims</div>
-      <div class="tab" data-tab="about">About</div>
+      <div class="tab active" onclick="showTab('submit')">Submit</div>
+      <div class="tab" onclick="showTab('claims')">Claims</div>
+      <div class="tab" onclick="showTab('about')">About</div>
     </div>
     
     <div id="submit" class="tab-content active">
@@ -59,13 +54,13 @@
         <h2>Submit a Claim</h2>
         <input type="text" id="claimId" placeholder="Claim ID (e.g., claim-1)">
         <textarea id="claimText" rows="3" placeholder="Enter your claim"></textarea>
-        <button id="submitBtn">Submit Claim</button>
+        <button onclick="submitClaim()">Submit Claim</button>
         <div id="submitStatus"></div>
       </div>
       <div class="card">
         <h2>Resolve Claim</h2>
         <input type="text" id="resolveClaimId" placeholder="Claim ID to resolve">
-        <button id="resolveBtn">Resolve (AI Consensus)</button>
+        <button onclick="resolveClaim()">Resolve (AI Consensus)</button>
         <div id="resolveStatus"></div>
         <div id="verdictResult"></div>
       </div>
@@ -74,7 +69,7 @@
     <div id="claims" class="tab-content">
       <div class="card">
         <h2>All Claims</h2>
-        <button id="loadBtn" class="refresh-btn">Refresh</button>
+        <button onclick="loadClaims()" style="background:none;border:1px solid #333;color:#888;padding:.5rem 1rem;border-radius:6px;cursor:pointer;font-size:.85rem">Refresh</button>
         <div id="claimsList" style="margin-top:1rem;"></div>
       </div>
     </div>
@@ -94,145 +89,104 @@
   
   <script>
     // TruthOracle dApp - Pure JavaScript, NO external dependencies
-    // Works with MetaMask, Rabby, and any EIP-1193 wallet
-    
-    const CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
-    const RPC = 'https://rpc-bradbury.genlayer.com';
-    let account = null;
-    
-    // Wait for DOM to load
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM loaded, initializing...');
-      
-      // Bind connect button
-      document.getElementById('connectBtn').addEventListener('click', connectWallet);
-      
-      // Bind submit button
-      document.getElementById('submitBtn').addEventListener('click', submitClaim);
-      
-      // Bind resolve button
-      document.getElementById('resolveBtn').addEventListener('click', resolveClaim);
-      
-      // Bind load claims button
-      document.getElementById('loadBtn').addEventListener('click', loadClaims);
-      
-      // Bind tabs
-      document.querySelectorAll('.tab').forEach(function(tab) {
-        tab.addEventListener('click', function() {
-          showTab(this.dataset.tab);
-        });
-      });
-      
-      console.log('All buttons bound');
-    });
+    var CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+    var account = null;
     
     function getProvider() {
       if (window.ethereum) return window.ethereum;
       return null;
     }
     
-    async function connectWallet() {
+    function connectWallet() {
       console.log('Connect wallet clicked');
-      const provider = getProvider();
+      var provider = getProvider();
       if (!provider) {
         showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
         return;
       }
-      try {
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+      provider.request({ method: 'eth_requestAccounts' }).then(function(accounts) {
         if (!accounts || accounts.length === 0) {
           showStatus('submitStatus', 'No accounts found. Please unlock your wallet.', 'error');
           return;
         }
         account = accounts[0];
         document.getElementById('walletAddress').textContent = account.slice(0,6)+'...'+account.slice(-4);
-        document.getElementById('connectBtn').textContent = 'Connected';
+        document.getElementsByTagName('button')[0].textContent = 'Connected';
         showStatus('submitStatus', 'Connected: ' + account.slice(0,6) + '...', 'success');
-      } catch (err) {
+      }).catch(function(err) {
         console.error('Connection error:', err);
         showStatus('submitStatus', 'Error: ' + err.message, 'error');
-      }
+      });
     }
     
-    async function submitClaim() {
+    function submitClaim() {
       console.log('Submit claim clicked');
       if (!account) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
-      const claimId = document.getElementById('claimId').value;
-      const text = document.getElementById('claimText').value;
+      var claimId = document.getElementById('claimId').value;
+      var text = document.getElementById('claimText').value;
       if (!claimId || !text) { showStatus('submitStatus', 'Fill all fields', 'error'); return; }
-      try {
-        document.getElementById('submitBtn').disabled = true;
-        showStatus('submitStatus', 'Submitting...', 'info');
-        const provider = getProvider();
-        
-        // Encode: submit_claim(string,string)
-        const selector = '0x4f6e982b';
-        const data = selector + encodeString(claimId) + encodeString(text);
-        
-        const txHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
-        });
-        
+      document.getElementById('submitBtn').disabled = true;
+      showStatus('submitStatus', 'Submitting...', 'info');
+      var provider = getProvider();
+      var selector = '0x4f6e982b';
+      var data = selector + encodeString(claimId) + encodeString(text);
+      provider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
+      }).then(function(txHash) {
         showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'success');
-      } catch (err) {
+        document.getElementById('submitBtn').disabled = false;
+      }).catch(function(err) {
         showStatus('submitStatus', 'Error: ' + err.message, 'error');
-      }
-      document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').disabled = false;
+      });
     }
     
-    async function resolveClaim() {
+    function resolveClaim() {
       console.log('Resolve claim clicked');
       if (!account) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
-      const claimId = document.getElementById('resolveClaimId').value;
+      var claimId = document.getElementById('resolveClaimId').value;
       if (!claimId) { showStatus('resolveStatus', 'Enter claim ID', 'error'); return; }
-      try {
-        document.getElementById('resolveBtn').disabled = true;
-        showStatus('resolveStatus', 'Running AI consensus...', 'info');
-        const provider = getProvider();
-        
-        // Encode: resolve_claim(string)
-        const selector = '0x3d18d4d8';
-        const data = selector + encodeString(claimId);
-        
-        const txHash = await provider.request({
-          method: 'eth_sendTransaction',
-          params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
-        });
-        
+      document.getElementById('resolveBtn').disabled = true;
+      showStatus('resolveStatus', 'Running AI consensus...', 'info');
+      var provider = getProvider();
+      var selector = '0x3d18d4d8';
+      var data = selector + encodeString(claimId);
+      provider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
+      }).then(function(txHash) {
         showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'success');
-      } catch (err) {
+        document.getElementById('resolveBtn').disabled = false;
+      }).catch(function(err) {
         showStatus('resolveStatus', 'Error: ' + err.message, 'error');
-      }
-      document.getElementById('resolveBtn').disabled = false;
+        document.getElementById('resolveBtn').disabled = false;
+      });
     }
     
-    async function loadClaims() {
+    function loadClaims() {
       console.log('Load claims clicked');
       if (!account) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
-      try {
-        const provider = getProvider();
-        
-        // Call get_claims_count()
-        const selector = '0x2e4a6e1a';
-        const result = await provider.request({
-          method: 'eth_call',
-          params: [{ from: account, to: CONTRACT, data: selector }, 'latest']
-        });
-        
-        const count = parseInt(result, 16);
+      var provider = getProvider();
+      var selector = '0x2e4a6e1a';
+      provider.request({
+        method: 'eth_call',
+        params: [{ from: account, to: CONTRACT, data: selector }, 'latest']
+      }).then(function(result) {
+        var count = parseInt(result, 16);
         document.getElementById('claimsList').innerHTML = '<p style="color:#888">Total claims: ' + count + '</p>';
-      } catch (err) {
+      }).catch(function(err) {
         document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Error loading claims</p>';
-      }
+      });
     }
     
     function encodeString(str) {
-      const hex = Array.from(str).map(function(c) { 
-        return c.charCodeAt(0).toString(16).padStart(2,'0'); 
-      }).join('');
-      const len = hex.length / 2;
-      return len.toString(16).padStart(64,'0') + hex.padEnd(64,'0');
+      var hex = '';
+      for (var i = 0; i < str.length; i++) {
+        hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+      }
+      var len = hex.length / 2;
+      return len.toString(16).padStart(64, '0') + hex.padEnd(64, '0');
     }
     
     function showStatus(id, msg, type) {
@@ -240,10 +194,24 @@
     }
     
     function showTab(tab) {
-      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
-      document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
-      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
-      document.getElementById(tab).classList.add('active');
+      console.log('Show tab:', tab);
+      // Remove active from all tabs
+      var tabs = document.querySelectorAll('.tab');
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].className = 'tab';
+      }
+      // Remove active from all contents
+      var contents = document.querySelectorAll('.tab-content');
+      for (var i = 0; i < contents.length; i++) {
+        contents[i].className = 'tab-content';
+      }
+      // Add active to clicked tab
+      var activeTab = document.querySelectorAll('.tab');
+      if (tab === 'submit') activeTab[0].className = 'tab active';
+      if (tab === 'claims') activeTab[1].className = 'tab active';
+      if (tab === 'about') activeTab[2].className = 'tab active';
+      // Add active to content
+      document.getElementById(tab).className = 'tab-content active';
     }
   </script>
 </body>
