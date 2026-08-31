@@ -88,6 +88,42 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Check current chain and switch to GenLayer Bradbury if needed
+      const currentChainId = await provider.request({ method: 'eth_chainId' });
+      const bradburyChainId = '0x1065'; // 4221 in hex
+      
+      if (currentChainId !== bradburyChainId) {
+        console.log('Current chain:', currentChainId, '- switching to GenLayer Bradbury...');
+        try {
+          // Try to switch to GenLayer Bradbury
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: bradburyChainId }],
+          });
+        } catch (switchError: any) {
+          // If the network is not added, add it
+          if (switchError.code === 4902) {
+            console.log('Network not found, adding GenLayer Bradbury...');
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: bradburyChainId,
+                chainName: 'GenLayer Bradbury Testnet',
+                rpcUrls: ['https://rpc-bradbury.genlayer.com'],
+                nativeCurrency: {
+                  name: 'GEN',
+                  symbol: 'GEN',
+                  decimals: 18,
+                },
+                blockExplorerUrls: ['https://explorer-bradbury.genlayer.com'],
+              }],
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      }
+
       // Request account access
       const accounts = await provider.request({ 
         method: 'eth_requestAccounts' 
