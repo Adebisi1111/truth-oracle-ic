@@ -44,14 +44,14 @@
     <p class="subtitle">Decentralized Fact Verification with AI Consensus</p>
     
     <div class="wallet-info" style="text-align:right;margin-bottom:1rem">
-      <button onclick="connectWallet()" id="connectBtn" style="background:#333;color:#fff;border:1px solid #555;padding:.5rem 1rem;border-radius:6px;cursor:pointer">Connect Wallet</button>
+      <button id="connectBtn" style="background:#333;color:#fff;border:1px solid #555;padding:.5rem 1rem;border-radius:6px;cursor:pointer">Connect Wallet</button>
       <span id="walletAddress" style="margin-left:1rem;font-size:.85rem"></span>
     </div>
     
     <div class="tabs">
-      <div class="tab active" onclick="showTab('submit')">Submit</div>
-      <div class="tab" onclick="showTab('claims')">Claims</div>
-      <div class="tab" onclick="showTab('about')">About</div>
+      <div class="tab active" data-tab="submit">Submit</div>
+      <div class="tab" data-tab="claims">Claims</div>
+      <div class="tab" data-tab="about">About</div>
     </div>
     
     <div id="submit" class="tab-content active">
@@ -59,13 +59,13 @@
         <h2>Submit a Claim</h2>
         <input type="text" id="claimId" placeholder="Claim ID (e.g., claim-1)">
         <textarea id="claimText" rows="3" placeholder="Enter your claim"></textarea>
-        <button onclick="submitClaim()" id="submitBtn">Submit Claim</button>
+        <button id="submitBtn">Submit Claim</button>
         <div id="submitStatus"></div>
       </div>
       <div class="card">
         <h2>Resolve Claim</h2>
         <input type="text" id="resolveClaimId" placeholder="Claim ID to resolve">
-        <button onclick="resolveClaim()" id="resolveBtn">Resolve (AI Consensus)</button>
+        <button id="resolveBtn">Resolve (AI Consensus)</button>
         <div id="resolveStatus"></div>
         <div id="verdictResult"></div>
       </div>
@@ -74,7 +74,7 @@
     <div id="claims" class="tab-content">
       <div class="card">
         <h2>All Claims</h2>
-        <button onclick="loadClaims()" class="refresh-btn">Refresh</button>
+        <button id="loadBtn" class="refresh-btn">Refresh</button>
         <div id="claimsList" style="margin-top:1rem;"></div>
       </div>
     </div>
@@ -92,17 +92,39 @@
     </div>
   </div>
   
-  <script type="module">
-    import { ethers } from 'https://esm.sh/ethers@6.13.7';
+  <script>
+    // TruthOracle dApp - Pure JavaScript, NO external dependencies
+    // Works with MetaMask, Rabby, and any EIP-1193 wallet
     
     const CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
-    const CONSENSUS = '0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D';
     const RPC = 'https://rpc-bradbury.genlayer.com';
-    const CHAIN_ID = 0x1065; // 4213
-    
-    let signer = null;
-    let provider = null;
     let account = null;
+    
+    // Wait for DOM to load
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM loaded, initializing...');
+      
+      // Bind connect button
+      document.getElementById('connectBtn').addEventListener('click', connectWallet);
+      
+      // Bind submit button
+      document.getElementById('submitBtn').addEventListener('click', submitClaim);
+      
+      // Bind resolve button
+      document.getElementById('resolveBtn').addEventListener('click', resolveClaim);
+      
+      // Bind load claims button
+      document.getElementById('loadBtn').addEventListener('click', loadClaims);
+      
+      // Bind tabs
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          showTab(this.dataset.tab);
+        });
+      });
+      
+      console.log('All buttons bound');
+    });
     
     function getProvider() {
       if (window.ethereum) return window.ethereum;
@@ -110,62 +132,49 @@
     }
     
     async function connectWallet() {
+      console.log('Connect wallet clicked');
+      const provider = getProvider();
+      if (!provider) {
+        showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
+        return;
+      }
       try {
-        const ethProvider = getProvider();
-        if (!ethProvider) {
-          showStatus('submitStatus', 'No wallet detected. Please install MetaMask or Rabby.', 'error');
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
+        if (!accounts || accounts.length === 0) {
+          showStatus('submitStatus', 'No accounts found. Please unlock your wallet.', 'error');
           return;
         }
-        
-        // Request account access
-        await ethProvider.request({ method: 'eth_requestAccounts' });
-        
-        // Create ethers browser provider
-        provider = new ethers.BrowserProvider(ethProvider);
-        signer = await provider.getSigner();
-        account = await signer.getAddress();
-        
+        account = accounts[0];
         document.getElementById('walletAddress').textContent = account.slice(0,6)+'...'+account.slice(-4);
         document.getElementById('connectBtn').textContent = 'Connected';
         showStatus('submitStatus', 'Connected: ' + account.slice(0,6) + '...', 'success');
-        
       } catch (err) {
         console.error('Connection error:', err);
-        if (err.code === 4001) {
-          showStatus('submitStatus', 'Connection rejected.', 'error');
-        } else {
-          showStatus('submitStatus', 'Error: ' + err.message, 'error');
-        }
+        showStatus('submitStatus', 'Error: ' + err.message, 'error');
       }
     }
     
     async function submitClaim() {
-      if (!signer) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
+      console.log('Submit claim clicked');
+      if (!account) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('claimId').value;
       const text = document.getElementById('claimText').value;
       if (!claimId || !text) { showStatus('submitStatus', 'Fill all fields', 'error'); return; }
-      
       try {
         document.getElementById('submitBtn').disabled = true;
         showStatus('submitStatus', 'Submitting...', 'info');
+        const provider = getProvider();
         
-        // Encode function call
-        const iface = new ethers.Interface(['function submit_claim(string claimId, string text)']);
-        const data = iface.encodeFunctionData('submit_claim', [claimId, text]);
+        // Encode: submit_claim(string,string)
+        const selector = '0x4f6e982b';
+        const data = selector + encodeString(claimId) + encodeString(text);
         
-        const tx = await signer.sendTransaction({
-          to: CONTRACT,
-          data: data,
-          gasLimit: 500000n
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
         });
         
-        showStatus('submitStatus', 'Submitted! TX: ' + tx.hash.slice(0,20) + '...', 'success');
-        
-        // Wait for receipt
-        const receipt = await tx.wait();
-        if (receipt && receipt.status === 1) {
-          showStatus('submitStatus', 'Confirmed! Block: ' + receipt.blockNumber, 'success');
-        }
+        showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'success');
       } catch (err) {
         showStatus('submitStatus', 'Error: ' + err.message, 'error');
       }
@@ -173,28 +182,25 @@
     }
     
     async function resolveClaim() {
-      if (!signer) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
+      console.log('Resolve claim clicked');
+      if (!account) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
       const claimId = document.getElementById('resolveClaimId').value;
       if (!claimId) { showStatus('resolveStatus', 'Enter claim ID', 'error'); return; }
-      
       try {
         document.getElementById('resolveBtn').disabled = true;
         showStatus('resolveStatus', 'Running AI consensus...', 'info');
+        const provider = getProvider();
         
-        const iface = new ethers.Interface(['function resolve_claim(string claimId)']);
-        const data = iface.encodeFunctionData('resolve_claim', [claimId]);
+        // Encode: resolve_claim(string)
+        const selector = '0x3d18d4d8';
+        const data = selector + encodeString(claimId);
         
-        const tx = await signer.sendTransaction({
-          to: CONTRACT,
-          data: data,
-          gasLimit: 500000n
+        const txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: account, to: CONTRACT, data: data, value: '0x0' }]
         });
         
-        showStatus('resolveStatus', 'Resolved! TX: ' + tx.hash.slice(0,20) + '...', 'success');
-        
-        // Wait and fetch result
-        await tx.wait();
-        setTimeout(() => loadClaim(claimId), 2000);
+        showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'success');
       } catch (err) {
         showStatus('resolveStatus', 'Error: ' + err.message, 'error');
       }
@@ -202,44 +208,31 @@
     }
     
     async function loadClaims() {
-      if (!provider) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
+      console.log('Load claims clicked');
+      if (!account) { document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
       try {
-        const iface = new ethers.Interface(['function get_claims_count() view returns (uint256)']);
-        const data = iface.encodeFunctionData('get_claims_count', []);
+        const provider = getProvider();
         
-        const result = await provider.call({
-          to: CONTRACT,
-          data: data
+        // Call get_claims_count()
+        const selector = '0x2e4a6e1a';
+        const result = await provider.request({
+          method: 'eth_call',
+          params: [{ from: account, to: CONTRACT, data: selector }, 'latest']
         });
         
-        const count = Number(ethers.toBigInt(result));
+        const count = parseInt(result, 16);
         document.getElementById('claimsList').innerHTML = '<p style="color:#888">Total claims: ' + count + '</p>';
       } catch (err) {
         document.getElementById('claimsList').innerHTML = '<p style="color:#ff7f7f">Error loading claims</p>';
       }
     }
     
-    async function loadClaim(claimId) {
-      if (!provider) return;
-      try {
-        const iface = new ethers.Interface(['function get_claim(string claimId) view returns (string)']);
-        const data = iface.encodeFunctionData('get_claim', [claimId]);
-        
-        const result = await provider.call({
-          to: CONTRACT,
-          data: data
-        });
-        
-        const claimStr = ethers.AbiCoder.defaultAbiCoder().decode(['string'], result)[0];
-        const claim = JSON.parse(claimStr);
-        
-        if (claim.exists && claim.resolved) {
-          document.getElementById('verdictResult').innerHTML = 
-            '<div class="verdict ' + claim.verdict + '">' + claim.verdict + '</div>';
-        }
-      } catch (err) {
-        console.error('Load claim error:', err);
-      }
+    function encodeString(str) {
+      const hex = Array.from(str).map(function(c) { 
+        return c.charCodeAt(0).toString(16).padStart(2,'0'); 
+      }).join('');
+      const len = hex.length / 2;
+      return len.toString(16).padStart(64,'0') + hex.padEnd(64,'0');
     }
     
     function showStatus(id, msg, type) {
@@ -247,9 +240,9 @@
     }
     
     function showTab(tab) {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-      event.target.classList.add('active');
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
       document.getElementById(tab).classList.add('active');
     }
   </script>
