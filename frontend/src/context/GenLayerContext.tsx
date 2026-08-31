@@ -12,16 +12,22 @@ declare global {
   }
 }
 
-const CONTRACT_ADDRESS = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+const CONTRACT_ADDRESS = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
 
 interface Claim {
   claim_id: string;
   exists: boolean;
   text?: string;
+  category?: string;
   submitter?: string;
   timestamp?: number;
   resolved?: boolean;
   verdict?: string;
+  confidence?: number;
+  validator_count?: number;
+  reasoning?: string;
+  resolved_at?: number;
+  appeal_count?: number;
 }
 
 interface GenLayerContextType {
@@ -62,6 +68,29 @@ function detectWallet() {
   return 'none';
 }
 
+// Retry wrapper for rate limiting
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 5): Promise<T> {
+  let attempt = 0;
+  let delay = 4000;
+  
+  while (attempt < maxAttempts) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const msg = e?.error?.message ?? e?.message ?? '';
+      if (msg.includes('-32005') || msg.includes('rate limit') || msg.includes('empty')) {
+        console.warn(`Retry ${attempt + 1}/${maxAttempts} after ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        attempt++;
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('Too many retries');
+}
+
 export function GenLayerProvider({ children }: { children: ReactNode }) {
   const [client, setClient] = useState<any>(null);
   const [account, setAccount] = useState<string | null>(null);
@@ -79,7 +108,6 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Get the provider (Rabby and MetaMask both use window.ethereum)
       const provider = window.rabby?.provider || window.ethereum;
       
       if (!provider) {
@@ -90,18 +118,16 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
 
       // Check current chain and switch to GenLayer Bradbury if needed
       const currentChainId = await provider.request({ method: 'eth_chainId' });
-      const bradburyChainId = '0x1065'; // 4221 in hex
+      const bradburyChainId = '0x107D'; // 4221 in hex
       
       if (currentChainId !== bradburyChainId) {
         console.log('Current chain:', currentChainId, '- switching to GenLayer Bradbury...');
         try {
-          // Try to switch to GenLayer Bradbury
           await provider.request({
             method: 'wallet_switchEthereumChain',
             params: [{ chainId: bradburyChainId }],
           });
         } catch (switchError: any) {
-          // If the network is not added, add it
           if (switchError.code === 4902) {
             console.log('Network not found, adding GenLayer Bradbury...');
             await provider.request({
@@ -124,7 +150,6 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Request account access
       const accounts = await provider.request({ 
         method: 'eth_requestAccounts' 
       });
@@ -137,7 +162,6 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
       
       const addr = accounts[0];
       
-      // Create genlayer client with the wallet address
       const newClient = createClient({
         chain: testnetBradbury,
         account: addr
@@ -168,12 +192,23 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
   const submitClaim = async (claimId: string, text: string): Promise<string> => {
     if (!client || !connected) throw new Error('Not connected');
     
-    const txHash = await client.writeContract({
+    console.log('Submitting claim...', { claimId, text });
+    
+    const txHash: string = await withRetry<string>(() => client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: 'submit_claim',
-      args: [claimId, text],
+      args: [claimId, text, 'General'],
       value: 0,
-    });
+    }));
+    
+    console.log('Submit tx hash:', txHash);
+
+    const receipt = await withRetry<any>(() => client.waitForTransactionReceipt({
+      hash: txHash,
+      status: 'ACCEPTED',
+    }));
+    
+    console.log('Submit receipt:', receipt);
 
     return txHash;
   };
@@ -181,12 +216,23 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
   const resolveClaim = async (claimId: string): Promise<string> => {
     if (!client || !connected) throw new Error('Not connected');
     
-    const txHash = await client.writeContract({
+    console.log('Resolving claim...', { claimId });
+    
+    const txHash: string = await withRetry<string>(() => client.writeContract({
       address: CONTRACT_ADDRESS,
       functionName: 'resolve_claim',
       args: [claimId],
       value: 0,
-    });
+    }));
+    
+    console.log('Resolve tx hash:', txHash);
+
+    const receipt = await withRetry<any>(() => client.waitForTransactionReceipt({
+      hash: txHash,
+      status: 'ACCEPTED',
+    }));
+    
+    console.log('Resolve receipt:', receipt);
 
     return txHash;
   };
@@ -194,27 +240,44 @@ export function GenLayerProvider({ children }: { children: ReactNode }) {
   const getClaim = async (claimId: string): Promise<Claim> => {
     if (!client) throw new Error('Not connected');
     
-    const result = await client.readContract({
+    // Wait for state to settle
+    await new Promise(r => setTimeout(r, 3000));
+    
+    const result: any = await withRetry(() => client.readContract({
       address: CONTRACT_ADDRESS,
       functionName: 'get_claim',
       args: [claimId],
       stateStatus: 'accepted',
-    });
+    }));
 
-    return JSON.parse(result.data);
+    console.log('getClaim raw result:', result);
+    
+    // Handle different response formats
+    const data = result?.data ?? result;
+    if (!data || data === 'undefined' || data === 'null') {
+      return { claim_id: claimId, exists: false };
+    }
+    
+    try {
+      const parsed = JSON.parse(data);
+      return parsed;
+    } catch (e) {
+      console.error('JSON parse error:', e, 'data:', data);
+      return { claim_id: claimId, exists: false };
+    }
   };
 
   const getClaimsCount = async (): Promise<number> => {
     if (!client) throw new Error('Not connected');
     
-    const result = await client.readContract({
+    const result: any = await withRetry(() => client.readContract({
       address: CONTRACT_ADDRESS,
       functionName: 'get_claims_count',
       args: [],
       stateStatus: 'accepted',
-    });
+    }));
 
-    return parseInt(result.data);
+    return parseInt(result?.data || result || '0');
   };
 
   return (

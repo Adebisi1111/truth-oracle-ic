@@ -6,199 +6,282 @@
 <title>TruthOracle</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;padding:2rem}
-h1{color:#ff6b35;margin-bottom:1rem}
-.card{background:#1a1a1a;border-radius:8px;padding:1rem;margin-bottom:1rem;border:1px solid #333}
-input,textarea{width:100%;padding:.5rem;margin-bottom:.5rem;background:#0a0a0a;border:1px solid #333;color:#fff;border-radius:4px}
-button{background:#ff6b35;color:#fff;border:none;padding:.5rem 1rem;border-radius:4px;cursor:pointer;margin-right:.5rem;margin-bottom:.5rem}
-button:hover{opacity:.8}
-button:disabled{opacity:.5}
-.msg{padding:.5rem;border-radius:4px;margin-top:.5rem;font-size:.9rem}
-.msg.ok{background:#1a3a1a;color:#7fff7f}
-.msg.err{background:#3a1a1a;color:#ff7f7f}
-.msg.info{background:#1a1a3a;color:#7f7fff}
-.tabs{display:flex;gap:.5rem;margin-bottom:1rem}
-.tab{padding:.5rem 1rem;background:#1a1a1a;border:1px solid #333;border-radius:4px;cursor:pointer}
-.tab.active{background:#ff6b35}
-.section{display:none}
-.section.active{display:block}
-#log{position:fixed;bottom:0;right:0;background:#222;color:#0f0;padding:.5rem;font-size:11px;max-width:300px;max-height:150px;overflow:auto;display:none}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#581c87 50%,#0f172a 100%);min-height:100vh;color:#fff}
+.max-w{max-width:1200px;margin:0 auto;padding:0 1rem}
+header{border-bottom:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(8px);background:rgba(255,255,255,0.05);padding:1rem 0}
+header .max-w{display:flex;justify-content:space-between;align-items:center}
+.logo{display:flex;align-items:center;gap:0.75rem}
+.logo-icon{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:1.2rem}
+.logo-text h1{font-size:1.25rem;font-weight:bold}
+.logo-text p{font-size:0.75rem;color:rgba(255,255,255,0.5)}
+.btn{padding:0.5rem 1rem;border-radius:8px;font-weight:500;font-size:0.875rem;cursor:pointer;transition:all 0.2s;border:none}
+.btn-primary{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2)}
+.btn-primary:hover{background:rgba(255,255,255,0.2)}
+.btn-success{background:rgba(34,197,94,0.2);color:#4ade80;border:1px solid rgba(34,197,94,0.3)}
+.btn-gradient{background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff}
+.btn-gradient:hover{opacity:0.9}
+.btn-gradient:disabled{opacity:0.5;cursor:not-allowed}
+.hero{text-align:center;padding:3rem 0}
+.hero h2{font-size:2.5rem;font-weight:bold;margin-bottom:1rem}
+.hero p{color:rgba(255,255,255,0.6);font-size:1.125rem;max-width:600px;margin:0 auto}
+.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem}
+.card h3{font-size:1.125rem;font-weight:600;margin-bottom:1rem}
+.input{width:100%;padding:0.75rem 1rem;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;font-size:0.875rem;margin-bottom:1rem}
+.input::placeholder{color:rgba(255,255,255,0.3)}
+.input:focus{outline:none;border-color:#a855f7}
+select.input{cursor:pointer}
+select.input option{background:#1e1b4b;color:#fff}
+.error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:1rem;margin-bottom:1.5rem;color:#f87171;font-size:0.875rem}
+.claims-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem}
+.claims-header h3{font-size:1.125rem;font-weight:600}
+.filters{display:flex;gap:0.5rem;flex-wrap:wrap}
+.filters input{max-width:200px;margin-bottom:0}
+.filter-btn{padding:0.375rem 0.75rem;border-radius:8px;font-size:0.875rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.6)}
+.filter-btn.active{background:rgba(168,85,247,0.3);color:#c084fc;border-color:rgba(168,85,247,0.5)}
+.claims-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.claim-card{background:rgba(255,255,255,0.05);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem;transition:all 0.2s}
+.claim-card:hover{background:rgba(255,255,255,0.1)}
+.claim-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:0.75rem}
+.claim-id{font-size:0.75rem;color:rgba(255,255,255,0.4);font-family:monospace}
+.verdict{padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:500;border:1px solid}
+.verdict-true{background:rgba(34,197,94,0.2);color:#4ade80;border-color:rgba(34,197,94,0.3)}
+.verdict-false{background:rgba(239,68,68,0.2);color:#f87171;border-color:rgba(239,68,68,0.3)}
+.verdict-inconclusive{background:rgba(234,179,8,0.2);color:#facc15;border-color:rgba(234,179,8,0.3)}
+.claim-text{font-weight:500;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.category{display:inline-block;padding:0.25rem 0.5rem;border-radius:9999px;font-size:0.75rem;font-weight:500;background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.3);margin-bottom:0.75rem}
+.claim-details{background:rgba(255,255,255,0.05);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem}
+.claim-details-row{display:flex;gap:1rem;font-size:0.75rem;color:rgba(255,255,255,0.6);margin-bottom:0.5rem}
+.claim-reasoning{font-size:0.875rem;color:rgba(255,255,255,0.7);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.claim-footer{display:flex;justify-content:space-between;align-items:center;margin-top:auto}
+.claim-submitter{font-size:0.75rem;color:rgba(255,255,255,0.4)}
+.claim-time{font-size:0.75rem;color:rgba(255,255,255,0.3)}
+.resolve-btn{padding:0.375rem 0.75rem;border-radius:8px;font-size:0.875rem;font-weight:500;cursor:pointer;transition:all 0.2s;border:1px solid rgba(168,85,247,0.3);background:rgba(168,85,247,0.2);color:#c084fc}
+.resolve-btn:hover{background:rgba(168,85,247,0.3)}
+.resolve-btn:disabled{opacity:0.5;cursor:not-allowed}
+.empty{text-align:center;padding:3rem;color:rgba(255,255,255,0.4)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:2rem 0}
+.stat-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem;text-align:center}
+.stat-value{font-size:1.5rem;font-weight:bold}
+.stat-label{font-size:0.875rem;color:rgba(255,255,255,0.4)}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem}
+.info-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1.25rem}
+.info-card h4{font-weight:500;margin-bottom:0.5rem}
+.info-card p{font-size:0.875rem;color:rgba(255,255,255,0.4)}
+footer{border-top:1px solid rgba(255,255,255,0.1);margin-top:3rem;padding:1.5rem 0;text-align:center;color:rgba(255,255,255,0.3);font-size:0.875rem}
+@media(max-width:768px){.stats{grid-template-columns:repeat(2,1fr)}.info-grid{grid-template-columns:1fr}.hero h2{font-size:1.75rem}}
 </style>
 </head>
 <body>
+<header>
+<div class="max-w">
+<div class="logo">
+<div class="logo-icon">T</div>
+<div class="logo-text"><h1>TruthOracle</h1><p>Decentralized Fact Verification</p></div>
+</div>
+<button id="connectBtn" class="btn btn-primary" onclick="connect()">Connect Wallet</button>
+</div>
+</header>
 
-<h1>TruthOracle</h1>
-<p style="color:#888;margin-bottom:1rem">Decentralized Fact Verification with AI Consensus</p>
-
-<div style="text-align:right;margin-bottom:1rem">
-  <button id="cBtn" onclick="connect()">Connect Wallet</button>
-  <span id="addr" style="font-size:.85rem;color:#888"></span>
+<main class="max-w" style="padding-top:2rem">
+<div class="hero">
+<h2>Verify Anything with AI Consensus</h2>
+<p>Submit claims and our AI consensus mechanism will verify them using independent validator analysis.</p>
 </div>
 
-<div class="tabs">
-  <div class="tab active" onclick="go('s')">Submit</div>
-  <div class="tab" onclick="go('c')">Claims</div>
-  <div class="tab" onclick="go('a')">About</div>
+<div id="errorBox" class="error" style="display:none"></div>
+
+<div class="card">
+<h3>Submit a Claim</h3>
+<input type="text" id="claimId" class="input" placeholder="Claim ID (unique identifier)">
+<textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
+<select id="claimCategory" class="input">
+<option value="General">General</option>
+<option value="Science">Science</option>
+<option value="News">News</option>
+<option value="Finance">Finance</option>
+<option value="Tech">Tech</option>
+<option value="Sports">Sports</option>
+</select>
+<button id="submitBtn" class="btn btn-gradient" style="width:100%;padding:0.75rem" onclick="submitClaim()" disabled>Connect Wallet to Submit</button>
 </div>
 
-<div id="s" class="section active">
-  <div class="card">
-    <h3>Submit a Claim</h3>
-    <input type="text" id="cid" placeholder="Claim ID">
-    <textarea id="ctxt" rows="2" placeholder="Your claim"></textarea>
-    <button onclick="submit()">Submit Claim</button>
-    <div id="ss"></div>
-  </div>
-  <div class="card">
-    <h3>Resolve Claim</h3>
-    <input type="text" id="rid" placeholder="Claim ID">
-    <button onclick="resolve()">Resolve</button>
-    <div id="rs"></div>
-    <div id="vr"></div>
-  </div>
+<div class="card">
+<div class="claims-header">
+<h3>Claims</h3>
+<div class="filters">
+<input type="text" id="searchInput" class="input" placeholder="Search claims..." oninput="filterClaims()">
+<button class="filter-btn active" onclick="setFilter('all')">All</button>
+<button class="filter-btn" onclick="setFilter('pending')">Pending</button>
+<button class="filter-btn" onclick="setFilter('resolved')">Resolved</button>
+</div>
+</div>
+<div id="claimsList" class="claims-grid">
+<div class="empty">No claims yet. Submit the first one above!</div>
+</div>
 </div>
 
-<div id="c" class="section">
-  <div class="card">
-    <h3>All Claims</h3>
-    <button onclick="load()">Refresh</button>
-    <div id="cl" style="margin-top:.5rem"></div>
-  </div>
+<div class="stats">
+<div class="stat-card"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total Claims</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#4ade80" id="statTrue">0</div><div class="stat-label">True</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#f87171" id="statFalse">0</div><div class="stat-label">False</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#facc15" id="statInconclusive">0</div><div class="stat-label">Inconclusive</div></div>
 </div>
 
-<div id="a" class="section">
-  <div class="card">
-    <h3>About</h3>
-    <p style="color:#ccc;line-height:1.6">
-      TruthOracle is a decentralized fact verification protocol built on GenLayer.
-      Contract: <code>0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2</code>
-    </p>
-  </div>
+<div class="info-grid">
+<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">🔍</div><h4>Independent Verification</h4><p>Multiple AI validators analyze claims independently</p></div>
+<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">🤝</div><h4>Consensus Mechanism</h4><p>Verdict reached when majority of validators agree</p></div>
+<div class="info-card"><div style="font-size:1.5rem;margin-bottom:0.5rem">⛓️</div><h4>On-Chain Record</h4><p>All claims and verdicts immutably stored on GenLayer</p></div>
 </div>
+</main>
 
-<div id="log"></div>
+<footer>TruthOracle — Built on GenLayer | Contract: 0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d</footer>
 
 <script>
-var CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
-var CONSENSUS = '0x0112Bf6e83497965A5fdD6Dad1E447a6E004271D';
-var acct = null;
-var logEl = document.getElementById('log');
+const CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
+const CONSENSUS = '0x0000000000000000000000000000000000000000';
+let provider, signer, account, claims = [], filter = 'all';
 
-function L(m) {
-  console.log(m);
-  if (logEl) { logEl.style.display = 'block'; logEl.innerHTML += m + '<br>'; }
+async function connect() {
+  if (!window.ethereum) { alert('Please install MetaMask or Rabby'); return; }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    account = await signer.getAddress();
+    document.getElementById('connectBtn').textContent = account.slice(0,6)+'...'+account.slice(-4);
+    document.getElementById('connectBtn').classList.remove('btn-primary');
+    document.getElementById('connectBtn').classList.add('btn-success');
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').textContent = 'Submit Claim';
+    await switchChain();
+    await loadClaims();
+  } catch(e) { console.error(e); alert('Connection failed: '+e.message); }
 }
 
-L('page loaded');
-L('ethereum: ' + (window.ethereum ? 'YES' : 'NO'));
-
-function prov() {
-  if (window.ethereum) return window.ethereum;
-  return null;
+async function switchChain() {
+  try {
+    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x107D' }] });
+  } catch(e) {
+    if (e.code === 4902) {
+      await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+        chainId: '0x107D', chainName: 'GenLayer Bradbury Testnet',
+        rpcUrls: ['https://rpc-bradbury.genlayer.com'],
+        nativeCurrency: { name: 'GEN', symbol: 'GEN', decimals: 18 },
+        blockExplorerUrls: ['https://explorer-bradbury.genlayer.com']
+      }]});
+    }
+  }
 }
 
-function connect() {
-  L('connect clicked');
-  var p = prov();
-  if (!p) { msg('ss', 'No wallet detected', 'err'); return; }
-  L('requesting accounts...');
-  p.request({ method: 'eth_requestAccounts' }).then(function(a) {
-    L('got: ' + JSON.stringify(a));
-    if (!a || !a.length) { msg('ss', 'No accounts', 'err'); return; }
-    acct = a[0];
-    document.getElementById('addr').textContent = acct.slice(0,6)+'...'+acct.slice(-4);
-    document.getElementById('cBtn').textContent = 'Connected';
-    msg('ss', 'Connected: ' + acct.slice(0,6), 'ok');
-  }).catch(function(e) { L('err: ' + e.message); msg('ss', 'Error: ' + e.message, 'err'); });
+async function submitClaim() {
+  const id = document.getElementById('claimId').value;
+  const text = document.getElementById('claimText').value;
+  const category = document.getElementById('claimCategory').value;
+  if (!id || !text) { alert('Please fill all fields'); return; }
+  try {
+    const iface = new ethers.Interface(['function submit_claim(string,string,string)']);
+    const data = iface.encodeFunctionData('submit_claim', [id, text, category]);
+    const tx = await signer.sendTransaction({ to: CONTRACT, data, gasLimit: 500000n });
+    await tx.wait();
+    document.getElementById('claimId').value = '';
+    document.getElementById('claimText').value = '';
+    alert('Claim submitted! TX: ' + tx.hash);
+    await loadClaims();
+  } catch(e) { console.error(e); alert('Submit failed: '+e.message); }
 }
 
-function submit() {
-  if (!acct) { msg('ss', 'Connect wallet first', 'err'); return; }
-  var id = document.getElementById('cid').value;
-  var txt = document.getElementById('ctxt').value;
-  if (!id || !txt) { msg('ss', 'Fill all fields', 'err'); return; }
-  msg('ss', 'Submitting...', 'info');
-  var p = prov();
+async function resolveClaim(id) {
+  try {
+    const iface = new ethers.Interface(['function resolve_claim(string)']);
+    const data = iface.encodeFunctionData('resolve_claim', [id]);
+    const tx = await signer.sendTransaction({ to: CONTRACT, data, gasLimit: 500000n });
+    await tx.wait();
+    alert('Resolution sent! Waiting for AI consensus...');
+    setTimeout(loadClaims, 5000);
+  } catch(e) { console.error(e); alert('Resolve failed: '+e.message); }
+}
+
+async function loadClaims() {
+  if (!provider) return;
+  try {
+    const countIface = new ethers.Interface(['function get_claims_count() view returns (uint256)']);
+    const countData = countIface.encodeFunctionData('get_claims_count', []);
+    const countResult = await provider.call({ to: CONTRACT, data: countData });
+    const count = parseInt(countResult);
+    
+    const allClaims = [];
+    for (let i = 1; i <= Math.min(count, 50); i++) {
+      try {
+        const getIface = new ethers.Interface(['function get_claim(string) view returns (string)']);
+        const getData = getIface.encodeFunctionData('get_claim', ['claim-'+i]);
+        const result = await provider.call({ to: CONTRACT, data: getData });
+        const decoded = getIface.decodeFunctionResult('get_claim', result)[0];
+        const parsed = JSON.parse(decoded);
+        if (parsed.exists) allClaims.push(parsed);
+      } catch(e) {}
+    }
+    claims = allClaims;
+    renderClaims();
+    updateStats();
+  } catch(e) { console.error('Load failed:', e); }
+}
+
+function renderClaims() {
+  const list = document.getElementById('claimsList');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let filtered = claims;
+  if (filter === 'pending') filtered = claims.filter(c => !c.resolved);
+  if (filter === 'resolved') filtered = claims.filter(c => c.resolved);
+  if (search) filtered = filtered.filter(c => 
+    c.claim_id.toLowerCase().includes(search) || 
+    c.text?.toLowerCase().includes(search) ||
+    c.category?.toLowerCase().includes(search)
+  );
   
-  // Build calldata for submit_claim(string,string)
-  var selector = '0x4f6e982b';
-  var data = selector + enc(id) + enc(txt);
+  if (filtered.length === 0) { list.innerHTML = '<div class="empty">No claims found</div>'; return; }
   
-  // Send through consensus contract
-  var tx = {
-    from: acct,
-    to: CONSENSUS,
-    data: data,
-    value: '0x0'
-  };
-  
-  L('sending tx: ' + JSON.stringify(tx));
-  
-  p.request({ method: 'eth_sendTransaction', params: [tx] })
-   .then(function(txHash) {
-     L('tx hash: ' + txHash);
-     msg('ss', 'Submitted! TX: ' + txHash.slice(0,20) + '...', 'ok');
-   })
-   .catch(function(e) { L('err: ' + e.message); msg('ss', 'Error: ' + e.message, 'err'); });
+  list.innerHTML = filtered.map(c => `
+    <div class="claim-card">
+      <div class="claim-header">
+        <span class="claim-id">#${c.claim_id}</span>
+        ${c.resolved ? `<span class="verdict verdict-${c.verdict?.toLowerCase()}">${c.verdict}</span>` : ''}
+      </div>
+      <p class="claim-text">${c.text || ''}</p>
+      ${c.category ? `<span class="category">${c.category}</span>` : ''}
+      ${c.resolved ? `
+        <div class="claim-details">
+          <div class="claim-details-row">
+            <span>Confidence: ${c.confidence}%</span>
+            <span>Validators: ${c.validator_count}</span>
+          </div>
+          ${c.reasoning ? `<p class="claim-reasoning">${c.reasoning}</p>` : ''}
+        </div>
+      ` : ''}
+      <div class="claim-footer">
+        <span class="claim-submitter">by ${c.submitter?.slice(0,6)}...${c.submitter?.slice(-4)}</span>
+        ${!c.resolved ? `<button class="resolve-btn" onclick="resolveClaim('${c.claim_id}')">Resolve</button>` : ''}
+      </div>
+      <div class="claim-time">${c.timestamp ? new Date(c.timestamp*1000).toLocaleString() : ''}</div>
+    </div>
+  `).join('');
 }
 
-function resolve() {
-  if (!acct) { msg('rs', 'Connect wallet first', 'err'); return; }
-  var id = document.getElementById('rid').value;
-  if (!id) { msg('rs', 'Enter claim ID', 'err'); return; }
-  msg('rs', 'Resolving...', 'info');
-  var p = prov();
-  
-  // Build calldata for resolve_claim(string)
-  var selector = '0x3d18d4d8';
-  var data = selector + enc(id);
-  
-  var tx = {
-    from: acct,
-    to: CONSENSUS,
-    data: data,
-    value: '0x0'
-  };
-  
-  L('sending tx: ' + JSON.stringify(tx));
-  
-  p.request({ method: 'eth_sendTransaction', params: [tx] })
-   .then(function(txHash) {
-     L('tx hash: ' + txHash);
-     msg('rs', 'Resolved! TX: ' + txHash.slice(0,20) + '...', 'ok');
-   })
-   .catch(function(e) { L('err: ' + e.message); msg('rs', 'Error: ' + e.message, 'err'); });
+function updateStats() {
+  document.getElementById('statTotal').textContent = claims.length;
+  document.getElementById('statTrue').textContent = claims.filter(c => c.verdict === 'TRUE').length;
+  document.getElementById('statFalse').textContent = claims.filter(c => c.verdict === 'FALSE').length;
+  document.getElementById('statInconclusive').textContent = claims.filter(c => c.verdict === 'INCONCLUSIVE').length;
 }
 
-function load() {
-  if (!acct) { document.getElementById('cl').innerHTML = '<p style="color:#ff7f7f">Connect wallet first</p>'; return; }
-  var p = prov();
-  p.request({ method: 'eth_call', params: [{ from: acct, to: CONTRACT, data: '0x2e4a6e1a' }, 'latest'] })
-   .then(function(r) { document.getElementById('cl').innerHTML = '<p style="color:#888">Total: ' + parseInt(r,16) + '</p>'; })
-   .catch(function(e) { document.getElementById('cl').innerHTML = '<p style="color:#ff7f7f">Error</p>'; });
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  renderClaims();
 }
 
-function enc(s) {
-  var h = '';
-  for (var i = 0; i < s.length; i++) h += s.charCodeAt(i).toString(16).padStart(2,'0');
-  return (h.length/2).toString(16).padStart(64,'0') + h.padEnd(64,'0');
-}
-
-function msg(id, t, c) {
-  document.getElementById(id).innerHTML = '<div class="msg ' + c + '">' + t + '</div>';
-}
-
-function go(s) {
-  L('go ' + s);
-  var tabs = document.querySelectorAll('.tab');
-  var secs = document.querySelectorAll('.section');
-  for (var i = 0; i < tabs.length; i++) tabs[i].className = 'tab';
-  for (var i = 0; i < secs.length; i++) secs[i].className = 'section';
-  if (s === 's') tabs[0].className = 'tab active';
-  if (s === 'c') tabs[1].className = 'tab active';
-  if (s === 'a') tabs[2].className = 'tab active';
-  document.getElementById(s).className = 'section active';
-}
+function filterClaims() { renderClaims(); }
 </script>
+<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
 </body>
 </html>
