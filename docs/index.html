@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruthOracle — Decentralized Fact Verification</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; min-height: 100vh; }
+    .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, #ff6b35, #f7c59f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #888; margin-bottom: 2rem; font-size: 1.1rem; }
+    .card { background: #1a1a1a; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #333; }
+    .card h2 { font-size: 1.2rem; margin-bottom: 1rem; color: #ff6b35; }
+    input, textarea { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; color: #fff; font-size: 1rem; margin-bottom: 0.75rem; }
+    input:focus, textarea:focus { outline: none; border-color: #ff6b35; }
+    button { background: linear-gradient(135deg, #ff6b35, #e85d2a); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status { padding: 0.75rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.9rem; }
+    .status.success { background: #1a3a1a; border: 1px solid #2d5a2d; color: #7fff7f; }
+    .status.error { background: #3a1a1a; border: 1px solid #5a2d2d; color: #ff7f7f; }
+    .status.info { background: #1a1a3a; border: 1px solid #2d2d5a; color: #7f7fff; }
+    .verdict { font-size: 1.5rem; font-weight: bold; text-align: center; padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+    .verdict.TRUE { background: #1a3a1a; color: #7fff7f; }
+    .verdict.FALSE { background: #3a1a1a; color: #ff7f7f; }
+    .verdict.INCONCLUSIVE { background: #3a3a1a; color: #ffff7f; }
+    .claim-list { list-style: none; }
+    .claim-item { padding: 0.75rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+    .claim-item:last-child { border-bottom: none; }
+    .claim-text { flex: 1; }
+    .claim-verdict { font-weight: bold; margin-left: 1rem; }
+    .claim-verdict.TRUE { color: #7fff7f; }
+    .claim-verdict.FALSE { color: #ff7f7f; }
+    .claim-verdict.INCONCLUSIVE { color: #ffff7f; }
+    .claim-verdict.pending { color: #888; }
+    .wallet-info { font-size: 0.85rem; color: #888; margin-top: 0.5rem; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .tab { padding: 0.5rem 1rem; border-radius: 8px; background: #1a1a1a; border: 1px solid #333; cursor: pointer; }
+    .tab.active { background: #ff6b35; border-color: #ff6b35; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TruthOracle</h1>
+    <p class="subtitle">Decentralized Fact Verification with AI Consensus</p>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('submit')">Submit Claim</div>
+      <div class="tab" onclick="showTab('claims')">All Claims</div>
+      <div class="tab" onclick="showTab('about')">About</div>
+    </div>
+    
+    <div id="submit" class="tab-content active">
+      <div class="card">
+        <h2>Submit a Claim</h2>
+        <input type="text" id="claimId" placeholder="Claim ID (e.g., claim-1)">
+        <textarea id="claimText" rows="3" placeholder="Enter your claim (e.g., 'The Earth is flat')"></textarea>
+        <button onclick="submitClaim()" id="submitBtn">Submit Claim</button>
+        <div id="submitStatus"></div>
+      </div>
+      
+      <div class="card">
+        <h2>Resolve Claim</h2>
+        <input type="text" id="resolveClaimId" placeholder="Claim ID to resolve">
+        <button onclick="resolveClaim()" id="resolveBtn">Resolve (AI Consensus)</button>
+        <div id="resolveStatus"></div>
+        <div id="verdictResult"></div>
+      </div>
+    </div>
+    
+    <div id="claims" class="tab-content">
+      <div class="card">
+        <h2>All Claims</h2>
+        <button onclick="loadClaims()" id="loadBtn">Refresh Claims</button>
+        <div id="claimsList" style="margin-top: 1rem;"></div>
+      </div>
+    </div>
+    
+    <div id="about" class="tab-content">
+      <div class="card">
+        <h2>About TruthOracle</h2>
+        <p style="color: #ccc; line-height: 1.6;">
+          TruthOracle is a decentralized fact verification protocol built on GenLayer.
+          Submit claims, and our AI consensus mechanism will verify them using
+          independent validator analysis.
+        </p>
+        <p style="color: #ccc; line-height: 1.6; margin-top: 1rem;">
+          <strong>Contract:</strong> <code id="contractAddr">0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2</code><br>
+          <strong>Network:</strong> GenLayer Bradbury Testnet<br>
+          <strong>Consensus:</strong> prompt_comparative (AI-powered)
+        </p>
+      </div>
+    </div>
+    
+    <div class="wallet-info">
+      <button onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
+      <span id="walletAddress" style="margin-left: 1rem;"></span>
+    </div>
+  </div>
+  
+  <script type="module">
+    import { createClient, createAccount } from 'https://unpkg.com/genlayer-js@1.1.8/dist/index.js';
+    import { testnetBradbury } from 'https://unpkg.com/genlayer-js@1.1.8/dist/index.js';
+    
+    const CONTRACT_ADDRESS = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+    let client = null;
+    let account = null;
+    
+    window.connectWallet = async () => {
+      try {
+        client = createClient({ chain: testnetBradbury });
+        await client.connect();
+        const accounts = await client.getAddresses();
+        account = accounts[0];
+        document.getElementById('walletAddress').textContent = account;
+        document.getElementById('connectBtn').textContent = 'Connected';
+        showStatus('submitStatus', 'Wallet connected: ' + account, 'success');
+      } catch (err) {
+        showStatus('submitStatus', 'Connection failed: ' + err.message, 'error');
+      }
+    };
+    
+    window.submitClaim = async () => {
+      if (!client) { showStatus('submitStatus', 'Connect wallet first', 'error'); return; }
+      const claimId = document.getElementById('claimId').value;
+      const text = document.getElementById('claimText').value;
+      if (!claimId || !text) { showStatus('submitStatus', 'Fill all fields', 'error'); return; }
+      
+      try {
+        document.getElementById('submitBtn').disabled = true;
+        showStatus('submitStatus', 'Submitting...', 'info');
+        const txHash = await client.writeContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'submit_claim',
+          args: [claimId, text],
+          value: 0
+        });
+        showStatus('submitStatus', 'Submitted! TX: ' + txHash.slice(0, 20) + '...', 'success');
+      } catch (err) {
+        showStatus('submitStatus', 'Error: ' + err.message, 'error');
+      }
+      document.getElementById('submitBtn').disabled = false;
+    };
+    
+    window.resolveClaim = async () => {
+      if (!client) { showStatus('resolveStatus', 'Connect wallet first', 'error'); return; }
+      const claimId = document.getElementById('resolveClaimId').value;
+      if (!claimId) { showStatus('resolveStatus', 'Enter claim ID', 'error'); return; }
+      
+      try {
+        document.getElementById('resolveBtn').disabled = true;
+        showStatus('resolveStatus', 'Running AI consensus...', 'info');
+        const txHash = await client.writeContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'resolve_claim',
+          args: [claimId],
+          value: 0
+        });
+        showStatus('resolveStatus', 'Resolved! TX: ' + txHash.slice(0, 20) + '...', 'success');
+        setTimeout(() => loadClaim(claimId), 2000);
+      } catch (err) {
+        showStatus('resolveStatus', 'Error: ' + err.message, 'error');
+      }
+      document.getElementById('resolveBtn').disabled = false;
+    };
+    
+    window.loadClaims = async () => {
+      if (!client) { showStatus('claimsList', 'Connect wallet first', 'error'); return; }
+      try {
+        const result = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'get_claims_count',
+          args: [],
+          stateStatus: 'accepted'
+        });
+        const count = parseInt(result.data);
+        const list = document.getElementById('claimsList');
+        list.innerHTML = '<p style="color: #888;">Total claims: ' + count + '</p>';
+      } catch (err) {
+        document.getElementById('claimsList').innerHTML = '<p style="color: #ff7f7f;">Error loading claims</p>';
+      }
+    };
+    
+    async function loadClaim(claimId) {
+      try {
+        const result = await client.readContract({
+          address: CONTRACT_ADDRESS,
+          functionName: 'get_claim',
+          args: [claimId],
+          stateStatus: 'accepted'
+        });
+        const claim = JSON.parse(result.data);
+        if (claim.exists && claim.resolved) {
+          document.getElementById('verdictResult').innerHTML = 
+            '<div class="verdict ' + claim.verdict + '">' + claim.verdict + '</div>';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    function showStatus(id, msg, type) {
+      document.getElementById(id).innerHTML = '<div class="status ' + type + '">' + msg + '</div>';
+    }
+    
+    window.showTab = (tab) => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+    };
+  </script>
+</body>
+</html>
