@@ -204,8 +204,8 @@ async function connect(){
   if(!window.ethereum){alert('Please install MetaMask or Rabby');return}
   try{
     await window.ethereum.request({method:'eth_requestAccounts'});
-    provider=new ethers.BrowserProvider(window.ethereum);
-    signer=await provider.getSigner();
+    provider=new ethers.providers.Web3Provider(window.ethereum);
+    signer=provider.getSigner();
     account=await signer.getAddress();
     var btn=document.getElementById('connectBtn');
     btn.textContent=account.slice(0,6)+'...'+account.slice(-4);
