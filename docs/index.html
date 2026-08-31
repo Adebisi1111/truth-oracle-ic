@@ -40,6 +40,8 @@
     .tab.active { background: #ff6b35; border-color: #ff6b35; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    .mobile-notice { background: #1a1a3a; border: 1px solid #2d2d5a; color: #7f7fff; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+    .mobile-notice a { color: #ff6b35; }
   </style>
 </head>
 <body>
@@ -109,9 +111,33 @@
     let client = null;
     let account = null;
     
+    // Detect if user is on mobile
+    function isMobile() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+    
     window.connectWallet = async () => {
+      // Check if running in MetaMask dApp browser or has wallet provider
+      if (isMobile()) {
+        // On mobile, we need to be inside MetaMask's dApp browser
+        if (!window.ethereum) {
+          showStatus('submitStatus', 'Please open this page in MetaMask dApp browser. Install MetaMask app and use its built-in browser to visit this URL.', 'error');
+          return;
+        }
+      } else {
+        // On desktop, check for MetaMask extension
+        if (!window.ethereum) {
+          showStatus('submitStatus', 'Please install MetaMask extension first.', 'error');
+          return;
+        }
+      }
+      
       try {
-        client = createClient({ chain: testnetBradbury });
+        // Create client with the wallet provider
+        client = createClient({ 
+          chain: testnetBradbury,
+          provider: window.ethereum
+        });
         await client.connect();
         const accounts = await client.getAddresses();
         account = accounts[0];
