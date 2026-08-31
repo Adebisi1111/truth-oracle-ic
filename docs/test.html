@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruthOracle - Wallet Test</title>
+  <style>
+    body { font-family: sans-serif; background: #0a0a0a; color: #fff; padding: 2rem; }
+    h1 { color: #ff6b35; }
+    .card { background: #1a1a1a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; border: 1px solid #333; }
+    button { background: #ff6b35; color: #fff; border: none; padding: .5rem 1rem; border-radius: 4px; cursor: pointer; margin: .25rem; }
+    button:disabled { opacity: .5; }
+    .msg { padding: .5rem; border-radius: 4px; margin-top: .5rem; font-size: .9rem; }
+    .ok { background: #1a3a1a; color: #7fff7f; }
+    .err { background: #3a1a1a; color: #ff7f7f; }
+    .info { background: #1a1a3a; color: #7f7fff; }
+    #debug { background: #222; color: #0f0; padding: 1rem; border-radius: 4px; font-size: 12px; white-space: pre-wrap; max-height: 300px; overflow: auto; }
+    code { background: #333; padding: .2rem .4rem; border-radius: 3px; font-size: .85rem; }
+  </style>
+</head>
+<body>
+
+<h1>TruthOracle - Wallet Test</h1>
+<p style="color: #888;">Testing wallet connection</p>
+
+<div class="card">
+  <h3>Step 1: Detect Wallet</h3>
+  <button onclick="detectWallet()">Detect Wallet</button>
+  <div id="detectResult"></div>
+</div>
+
+<div class="card">
+  <h3>Step 2: Connect</h3>
+  <button onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
+  <div id="connectResult"></div>
+</div>
+
+<div class="card">
+  <h3>Step 3: Check Connection</h3>
+  <button onclick="checkConnection()">Check Connection</button>
+  <div id="checkResult"></div>
+</div>
+
+<div class="card">
+  <h3>Debug Log</h3>
+  <div id="debug">Waiting...</div>
+</div>
+
+<script>
+var CONTRACT = '0x0067D61d2b1992f9bC74e8d43d96dF98C5fccaf2';
+var account = null;
+var debugEl = document.getElementById('debug');
+
+function log(msg) {
+  console.log(msg);
+  debugEl.textContent += msg + '\n';
+}
+
+function detectWallet() {
+  log('=== Detecting Wallet ===');
+  log('window.ethereum: ' + (window.ethereum ? 'YES' : 'NO'));
+  log('window.rabby: ' + (window.rabby ? 'YES' : 'NO'));
+  log('window.web3: ' + (window.web3 ? 'YES' : 'NO'));
+  
+  if (window.ethereum) {
+    log('ethereum.isMetaMask: ' + (window.ethereum.isMetaMask ? 'YES' : 'NO'));
+    log('ethereum.isRabby: ' + (window.ethereum.isRabby ? 'YES' : 'NO'));
+    log('ethereum.isConnected: ' + (typeof window.ethereum.isConnected));
+  }
+  
+  var result = document.getElementById('detectResult');
+  if (window.ethereum || window.rabby) {
+    result.innerHTML = '<div class="msg ok">Wallet detected!</div>';
+  } else {
+    result.innerHTML = '<div class="msg err">No wallet detected. Please install MetaMask or Rabby.</div>';
+  }
+}
+
+function connectWallet() {
+  log('=== Connecting Wallet ===');
+  
+  var provider = window.ethereum || (window.rabby && window.rabby.provider);
+  
+  if (!provider) {
+    log('ERROR: No provider found');
+    document.getElementById('connectResult').innerHTML = '<div class="msg err">No wallet detected</div>';
+    return;
+  }
+  
+  log('Provider found, requesting accounts...');
+  
+  provider.request({ method: 'eth_requestAccounts' })
+    .then(function(accounts) {
+      log('Accounts received: ' + JSON.stringify(accounts));
+      if (accounts && accounts.length > 0) {
+        account = accounts[0];
+        log('Connected: ' + account);
+        document.getElementById('connectBtn').textContent = 'Connected: ' + account.slice(0,6) + '...';
+        document.getElementById('connectResult').innerHTML = '<div class="msg ok">Connected: ' + account + '</div>';
+      } else {
+        log('No accounts returned');
+        document.getElementById('connectResult').innerHTML = '<div class="msg err">No accounts returned</div>';
+      }
+    })
+    .catch(function(err) {
+      log('ERROR: ' + err.message + ' (code: ' + err.code + ')');
+      document.getElementById('connectResult').innerHTML = '<div class="msg err">Error: ' + err.message + '</div>';
+    });
+}
+
+function checkConnection() {
+  log('=== Checking Connection ===');
+  log('account: ' + (account || 'null'));
+  
+  var result = document.getElementById('checkResult');
+  if (account) {
+    result.innerHTML = '<div class="msg ok">Connected: ' + account + '</div>';
+  } else {
+    result.innerHTML = '<div class="msg err">Not connected</div>';
+  }
+}
+
+// Auto-detect on load
+window.addEventListener('load', function() {
+  log('Page loaded');
+  detectWallet();
+});
+</script>
+</body>
+</html>
