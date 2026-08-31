@@ -119,9 +119,6 @@
       <div><h1>TruthOracle</h1><span>Decentralized Fact Verification</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:0.75rem">
-      <div id="walletBalance" style="padding:0.4rem 0.75rem;border-radius:8px;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.2);font-size:0.8125rem;font-weight:500;color:#4ade80;display:none">
-        <span id="balanceAmount">0.00</span> USDC
-      </div>
       <button id="connectBtn" class="btn btn-primary" onclick="connect()">Connect Wallet</button>
     </div>
   </div>
@@ -194,9 +191,25 @@
 
 <footer>TruthOracle — Built on GenLayer | Contract: 0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d</footer>
 
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
 const CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
 let provider, signer, account, claims = [], filter = 'all';
+
+// Load saved claims from localStorage
+function loadSavedClaims() {
+  try {
+    var saved = localStorage.getItem('truthoracle_claims');
+    if (saved) claims = JSON.parse(saved);
+  } catch(e) {}
+}
+
+// Save claims to localStorage
+function saveClaims() {
+  try {
+    localStorage.setItem('truthoracle_claims', JSON.stringify(claims));
+  } catch(e) {}
+}
 
 function showError(msg){var e=document.getElementById('errorBox');e.textContent=msg;e.style.display='block';setTimeout(()=>e.style.display='none',5000)}
 
@@ -212,9 +225,9 @@ async function connect(){
     btn.className='btn btn-gradient';
     document.getElementById('submitBtn').disabled=false;
     document.getElementById('submitBtn').textContent='Submit Claim';
-    document.getElementById('walletBalance').style.display='block';
     await switchChain();
-    await loadClaims();
+    renderClaims();
+    updateStats();
   }catch(e){console.error(e);showError('Connection failed: '+e.message)}
 }
 
@@ -231,33 +244,69 @@ async function submitClaim(){
   var category=document.getElementById('claimCategory').value;
   if(!id||!text){alert('Please fill all fields');return}
   try{
-    var iface=new ethers.Interface(['function submit_claim(string,string,string)']);
+    var iface=new ethers.utils.Interface(['function submit_claim(string,string,string)']);
     var data=iface.encodeFunctionData('submit_claim',[id,text,category]);
     var tx=await signer.sendTransaction({to:CONTRACT,data,gasLimit:500000n});
     await tx.wait();
+    
+    // Add to local claims immediately
+    var newClaim = {
+      claim_id: id,
+      exists: true,
+      text: text,
+      category: category,
+      submitter: account,
+      timestamp: Math.floor(Date.now()/1000),
+      resolved: false,
+      verdict: '',
+      confidence: 0,
+      validator_count: 0,
+      reasoning: '',
+      resolved_at: 0,
+      appeal_count: 0
+    };
+    claims = [newClaim, ...claims];
+    saveClaims();
+    
     document.getElementById('claimId').value='';
     document.getElementById('claimText').value='';
+    renderClaims();
+    updateStats();
     alert('Claim submitted! TX: '+tx.hash);
-    await loadClaims();
   }catch(e){console.error(e);showError('Submit failed: '+e.message)}
 }
 
 async function resolveClaim(id){
   try{
-    var iface=new ethers.Interface(['function resolve_claim(string)']);
+    var iface=new ethers.utils.Interface(['function resolve_claim(string)']);
     var data=iface.encodeFunctionData('resolve_claim',[id]);
     var tx=await signer.sendTransaction({to:CONTRACT,data,gasLimit:500000n});
     await tx.wait();
     alert('Resolution sent! Waiting for AI consensus...');
-    setTimeout(loadClaims,5000);
+    setTimeout(function() { refreshClaim(id); }, 5000);
   }catch(e){console.error(e);showError('Resolve failed: '+e.message)}
+}
+
+async function refreshClaim(id){
+  try{
+    var getIface=new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
+    var result=await provider.call({to:CONTRACT,data:getIface.encodeFunctionData('get_claim',[id])});
+    var decoded=getIface.decodeFunctionResult('get_claim',result)[0];
+    var parsed=JSON.parse(decoded);
+    if(parsed.exists){
+      claims = claims.map(c => c.claim_id===id ? parsed : c);
+      saveClaims();
+      renderClaims();
+      updateStats();
+    }
+  }catch(e){console.error('Refresh failed:',e);}
 }
 
 async function lookupClaim(){
   var id=document.getElementById('lookupId').value;
   if(!id){alert('Please enter a claim ID');return}
   try{
-    var getIface=new ethers.Interface(['function get_claim(string) view returns (string)']);
+    var getIface=new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
     var result=await provider.call({to:CONTRACT,data:getIface.encodeFunctionData('get_claim',[id])});
     var decoded=getIface.decodeFunctionResult('get_claim',result)[0];
     var parsed=JSON.parse(decoded);
@@ -268,34 +317,13 @@ async function lookupClaim(){
       }else{
         claims=[parsed,...claims];
       }
+      saveClaims();
       renderClaims();
       updateStats();
     }else{
       alert('Claim not found');
     }
   }catch(e){console.error(e);showError('Lookup failed: '+e.message)}
-}
-
-async function loadClaims(){
-  if(!provider)return;
-  try{
-    var countIface=new ethers.Interface(['function get_claims_count() view returns (uint256)']);
-    var countResult=await provider.call({to:CONTRACT,data:countIface.encodeFunctionData('get_claims_count',[])});
-    var count=parseInt(countResult);
-    var allClaims=[];
-    for(var i=1;i<=Math.min(count,50);i++){
-      try{
-        var getIface=new ethers.Interface(['function get_claim(string) view returns (string)']);
-        var result=await provider.call({to:CONTRACT,data:getIface.encodeFunctionData('get_claim',['claim-'+i])});
-        var decoded=getIface.decodeFunctionResult('get_claim',result)[0];
-        var parsed=JSON.parse(decoded);
-        if(parsed.exists)allClaims.push(parsed);
-      }catch(e){}
-    }
-    claims=allClaims;
-    renderClaims();
-    updateStats();
-  }catch(e){console.error('Load failed:',e);showError('Failed to load claims')}
 }
 
 function renderClaims(){
@@ -346,7 +374,9 @@ function setFilter(f){
 }
 
 function filterClaims(){renderClaims()}
+
+// Load saved claims on page load
+loadSavedClaims();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 </body>
 </html>
