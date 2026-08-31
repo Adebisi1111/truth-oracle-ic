@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useGenLayer } from '@/context/GenLayerContext';
 
 const CONTRACT_ADDRESS = '0xA8c8986bd62AD9dD7445232213Eb5C03adE31D7d';
 
@@ -17,32 +18,17 @@ interface Claim {
 }
 
 export default function Home() {
+  const { account, connected, connecting, connect, disconnect, submitClaim, resolveClaim, getClaim, getClaimsCount } = useGenLayer();
+  
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(false);
   const [claimId, setClaimId] = useState('');
   const [claimText, setClaimText] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const connectWallet = async () => {
-    if (typeof window !== 'undefined' && (window as any).ethereum) {
-      try {
-        const accounts = await (window as any).ethereum.request({
-          method: 'eth_requestAccounts',
-        });
-        setWalletAddress(accounts[0]);
-        setWalletConnected(true);
-      } catch (err) {
-        console.error('Wallet connection failed:', err);
-      }
-    } else {
-      alert('Please install MetaMask');
-    }
-  };
-
-  const submitClaim = async () => {
-    if (!walletConnected) {
+  const handleSubmitClaim = async () => {
+    if (!connected) {
       alert('Please connect wallet first');
       return;
     }
@@ -52,44 +38,46 @@ export default function Home() {
     }
 
     setLoading(true);
+    setError(null);
     try {
-      // In production, this would call the GenLayer contract
-      // For now, we simulate the submission
-      const newClaim: Claim = {
-        claim_id: claimId,
-        exists: true,
-        text: claimText,
-        evidence_url: evidenceUrl,
-        submitter: walletAddress,
-        timestamp: Math.floor(Date.now() / 1000),
-        resolved: false,
-        verdict: '',
-        consensus_rounds: 0,
-      };
+      const txHash = await submitClaim(claimId, claimText, evidenceUrl);
+      
+      // Fetch the newly created claim
+      const newClaim = await getClaim(claimId);
       setClaims([newClaim, ...claims]);
+      
+      // Clear form
       setClaimId('');
       setClaimText('');
       setEvidenceUrl('');
-      alert('Claim submitted! (Demo mode - connect to GenLayer for real transactions)');
-    } catch (err) {
+      
+      alert(`Claim submitted! TX: ${txHash}`);
+    } catch (err: any) {
       console.error('Submission failed:', err);
-      alert('Submission failed');
+      setError(err.message || 'Submission failed');
     }
     setLoading(false);
   };
 
-  const resolveClaim = async (id: string) => {
-    if (!walletConnected) {
+  const handleResolveClaim = async (id: string) => {
+    if (!connected) {
       alert('Please connect wallet first');
       return;
     }
     setLoading(true);
-    // Simulate resolution
-    setClaims(claims.map(c => 
-      c.claim_id === id 
-        ? { ...c, resolved: true, verdict: ['TRUE', 'FALSE', 'INCONCLUSIVE'][Math.floor(Math.random() * 3)] }
-        : c
-    ));
+    setError(null);
+    try {
+      const txHash = await resolveClaim(id);
+      
+      // Fetch updated claim
+      const updated = await getClaim(id);
+      setClaims(claims.map(c => c.claim_id === id ? updated : c));
+      
+      alert(`Claim resolved! TX: ${txHash}`);
+    } catch (err: any) {
+      console.error('Resolution failed:', err);
+      setError(err.message || 'Resolution failed');
+    }
     setLoading(false);
   };
 
@@ -117,15 +105,18 @@ export default function Home() {
             </div>
           </div>
           <button
-            onClick={connectWallet}
+            onClick={connected ? disconnect : connect}
+            disabled={connecting}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-              walletConnected
+              connected
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                 : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
             }`}
           >
-            {walletConnected
-              ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
+            {connecting
+              ? 'Connecting...'
+              : connected
+              ? `${account?.slice(0, 6)}...${account?.slice(-4)}`
               : 'Connect Wallet'}
           </button>
         </div>
@@ -142,6 +133,13 @@ export default function Home() {
             the evidence, then reach consensus on whether it's true, false, or inconclusive.
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-6">
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
         {/* Submit Form */}
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 mb-8">
@@ -169,18 +167,21 @@ export default function Home() {
               className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-purple-500"
             />
             <button
-              onClick={submitClaim}
-              disabled={loading}
+              onClick={handleSubmitClaim}
+              disabled={loading || !connected}
               className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {loading ? 'Submitting...' : 'Submit Claim'}
+              {loading ? 'Submitting...' : connected ? 'Submit Claim' : 'Connect Wallet to Submit'}
             </button>
           </div>
         </div>
 
         {/* Claims List */}
         <div className="space-y-4">
-          <h3 className="text-white font-semibold text-lg">Claims</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-white font-semibold text-lg">Claims</h3>
+            <span className="text-white/40 text-sm">{claims.length} total</span>
+          </div>
           {claims.length === 0 ? (
             <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
               <p className="text-white/40">No claims yet. Submit the first one above!</p>
@@ -205,9 +206,9 @@ export default function Home() {
                   </div>
                   {!claim.resolved && (
                     <button
-                      onClick={() => resolveClaim(claim.claim_id)}
-                      disabled={loading}
-                      className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium hover:bg-purple-500/30 transition-colors"
+                      onClick={() => handleResolveClaim(claim.claim_id)}
+                      disabled={loading || !connected}
+                      className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-sm font-medium hover:bg-purple-500/30 transition-colors disabled:opacity-50"
                     >
                       Resolve
                     </button>
