@@ -102,6 +102,14 @@
     <div class="card-title">Submit a Claim</div>
     <input type="text" id="claimId" class="input" placeholder="Claim ID (e.g., claim-1)">
     <textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
+    <select id="claimCategory" class="input">
+      <option value="General">General</option>
+      <option value="Science">Science</option>
+      <option value="News">News</option>
+      <option value="Finance">Finance</option>
+      <option value="Tech">Tech</option>
+      <option value="Sports">Sports</option>
+    </select>
     <button id="submitBtn" class="btn btn-gradient" style="width:100%;padding:0.75rem" onclick="submitClaim()" disabled>Connect Wallet to Submit</button>
   </div>
 
@@ -147,11 +155,11 @@
   </div>
 </main>
 
-<footer>TruthOracle — Built on GenLayer | Contract: 0x209D8A4402F2EFD64EC43C61d79A721C99E9259E</footer>
+<footer>TruthOracle — Built on GenLayer | Contract: 0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-var CONTRACT = '0x209D8A4402F2EFD64EC43C61d79A721C99E9259E';
+var CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
 var provider, signer, account;
 var claims = [];
 var filter = 'all';
@@ -208,9 +216,10 @@ function switchChain() {
 function submitClaim() {
   var id = document.getElementById('claimId').value;
   var text = document.getElementById('claimText').value;
+  var category = document.getElementById('claimCategory').value;
   if(!id||!text){alert('Please fill all fields');return}
-  var iface = new ethers.utils.Interface(['function submit_claim(string,string)']);
-  var data = iface.encodeFunctionData('submit_claim',[id,text]);
+  var iface = new ethers.utils.Interface(['function submit_claim(string,string,string)']);
+  var data = iface.encodeFunctionData('submit_claim',[id,text,category]);
   signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
     return tx.wait();
   }).then(function(){
@@ -315,8 +324,10 @@ function renderClaims() {
         (c.resolved ? '<span class="verdict verdict-' + (c.verdict||'').toLowerCase() + '">' + c.verdict + '</span>' : '') +
       '</div>' +
       '<p class="claim-text">' + (c.text||'') + '</p>' +
+      (c.category ? '<span class="category">' + c.category + '</span>' : '') +
       (c.resolved ? '<div class="claim-details">' +
-        '<div class="details-row"><span>Verdict</span><span>' + c.verdict + '</span></div>' +
+        '<div class="details-row"><span>Confidence</span><span>' + (c.confidence||0) + '%</span></div>' +
+        '<div class="details-row"><span>Validators</span><span>' + (c.validator_count||0) + '</span></div>' +
         (c.reasoning ? '<p class="reasoning">' + c.reasoning + '</p>' : '') +
       '</div>' : '') +
       '<div class="claim-footer">' +
