@@ -58,7 +58,6 @@
     .verdict-false{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.2)}
     .verdict-inconclusive{background:rgba(234,179,8,0.15);color:#facc15;border:1px solid rgba(234,179,8,0.2)}
     .claim-text{font-weight:500;font-size:0.875rem;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .category{display:inline-block;padding:0.2rem 0.5rem;border-radius:9999px;font-size:0.65rem;font-weight:500;background:rgba(168,85,247,0.1);color:#c084fc;border:1px solid rgba(168,85,247,0.2);margin-bottom:0.75rem}
     .claim-details{background:rgba(0,0,0,0.2);border-radius:8px;padding:0.75rem;margin-bottom:0.75rem;flex:1}
     .details-row{display:flex;justify-content:space-between;font-size:0.7rem;color:rgba(255,255,255,0.5);margin-bottom:0.375rem}
     .details-row span:last-child{color:rgba(255,255,255,0.7);font-weight:500}
@@ -151,21 +150,12 @@
 <footer>TruthOracle — Built on GenLayer | Contract: 0x209D8A4402F2EFD64EC43C61d79A721C99E9259E</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script type="module">
-import { createClient } from 'https://esm.sh/genlayer-js@1.1.8';
-import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
+<script>
+var CONTRACT = '0x209D8A4402F2EFD64EC43C61d79A721C99E9259E';
+var provider, signer, account;
+var claims = [];
+var filter = 'all';
 
-const CONTRACT = '0x209D8A4402F2EFD64EC43C61d79A721C99E9259E';
-let client, signer, account, claims = [], filter = 'all';
-// Clear old saved claims (one-time cleanup)
-if (localStorage.getItem('truthoracle_claims')) {
-  localStorage.removeItem('truthoracle_claims');
-}
-if (localStorage.getItem('truthoracle_claim_ids')) {
-  localStorage.removeItem('truthoracle_claim_ids');
-}
-
-// Save claim ID to localStorage
 function saveClaimId(id) {
   try {
     var ids = JSON.parse(localStorage.getItem('truthoracle_claim_ids') || '[]');
@@ -174,250 +164,187 @@ function saveClaimId(id) {
   } catch(e) {}
 }
 
-// Get all saved claim IDs
 function getSavedIds() {
-  try {
-    return JSON.parse(localStorage.getItem('truthoracle_claim_ids') || '[]');
-  } catch(e) {}
-  return [];
+  try { return JSON.parse(localStorage.getItem('truthoracle_claim_ids') || '[]'); } catch(e) { return []; }
 }
-function showError(msg){var e=document.getElementById('errorBox');e.textContent=msg;e.style.display='block';setTimeout(()=>e.style.display='none',5000)}
 
-async function connect(){
+function showError(msg){var e=document.getElementById('errorBox');e.textContent=msg;e.style.display='block';setTimeout(function(){e.style.display='none'},5000)}
+
+function connect() {
   if(!window.ethereum){alert('Please install MetaMask or Rabby');return}
-  try{
-    await window.ethereum.request({method:'eth_requestAccounts'});
-    var ethProvider = new window.ethers.providers.Web3Provider(window.ethereum);
-    signer = await ethProvider.getSigner();
-    account = await signer.getAddress();
-    
-    client = createClient({
-      chain: testnetBradbury,
-      account: account
-    });
-    
-    var btn=document.getElementById('connectBtn');
-    btn.textContent=account.slice(0,6)+'...'+account.slice(-4);
-    btn.className='btn btn-gradient';
-    document.getElementById('submitBtn').disabled=false;
-    document.getElementById('submitBtn').textContent='Submit Claim';
-    await switchChain();
-    await loadClaimsByIds();
-  }catch(e){console.error(e);showError('Connection failed: '+e.message)}
+  window.ethereum.request({method:'eth_requestAccounts'}).then(function(accounts){
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    return provider.getSigner();
+  }).then(function(s){
+    signer = s;
+    return signer.getAddress();
+  }).then(function(addr){
+    account = addr;
+    document.getElementById('connectBtn').textContent = account.slice(0,6)+'...'+account.slice(-4);
+    document.getElementById('connectBtn').className = 'btn btn-gradient';
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').textContent = 'Submit Claim';
+    return switchChain();
+  }).then(function(){
+    return loadClaimsByIds();
+  }).catch(function(e){
+    console.error(e);
+    showError('Connection failed: ' + e.message);
+  });
 }
 
-async function switchChain(){
-  try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x107D'}]})}
-  catch(e){if(e.code===4902){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{
-    chainId:'0x107D',chainName:'GenLayer Bradbury Testnet',rpcUrls:['https://rpc-bradbury.genlayer.com'],
-    nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},blockExplorerUrls:['https://explorer-bradbury.genlayer.com']}]})}}
+function switchChain() {
+  return window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:'0x107D'}]}).catch(function(e){
+    if(e.code === 4902) {
+      return window.ethereum.request({method:'wallet_addEthereumChain',params:[{
+        chainId:'0x107D',chainName:'GenLayer Bradbury Testnet',rpcUrls:['https://rpc-bradbury.genlayer.com'],
+        nativeCurrency:{name:'GEN',symbol:'GEN',decimals:18},blockExplorerUrls:['https://explorer-bradbury.genlayer.com']
+      }]});
+    }
+    throw e;
+  });
 }
 
-async function submitClaim(){
-  var id=document.getElementById('claimId').value;
-  var text=document.getElementById('claimText').value;
-  var category=document.getElementById('claimCategory').value;
+function submitClaim() {
+  var id = document.getElementById('claimId').value;
+  var text = document.getElementById('claimText').value;
   if(!id||!text){alert('Please fill all fields');return}
-  try{
-    var txHash = await withRetry(() => client.writeContract({
-      address: CONTRACT,
-      functionName: 'submit_claim',
-      args: [id, text],
-      value: 0
-    }));
-    
-    // Save the actual claim ID
+  var iface = new ethers.utils.Interface(['function submit_claim(string,string)']);
+  var data = iface.encodeFunctionData('submit_claim',[id,text]);
+  signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
+    return tx.wait();
+  }).then(function(){
     saveClaimId(id);
-    
-    // Add to local claims immediately
-    var newClaim = {
-      claim_id: id,
-      exists: true,
-      text: text,
-      submitter: account,
-      timestamp: Math.floor(Date.now()/1000),
-      resolved: false,
-      verdict: '',
-      reasoning: '',
-      resolved_at: 0
-    };
-    claims = [newClaim, ...claims];
-    
     document.getElementById('claimId').value='';
     document.getElementById('claimText').value='';
+    return loadClaimsByIds();
+  }).then(function(){
+    alert('Claim submitted!');
+  }).catch(function(e){
+    console.error(e);
+    showError('Submit failed: ' + e.message);
+  });
+}
+
+function resolveClaim(id) {
+  var iface = new ethers.utils.Interface(['function resolve_claim(string)']);
+  var data = iface.encodeFunctionData('resolve_claim',[id]);
+  signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
+    return tx.wait();
+  }).then(function(){
+    alert('Resolution sent! Waiting for AI consensus...');
+    setTimeout(function(){ refreshClaim(id); }, 10000);
+  }).catch(function(e){
+    console.error(e);
+    showError('Resolve failed: ' + e.message);
+  });
+}
+
+function refreshClaim(id) {
+  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
+  provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
+    var decoded = iface.decodeFunctionResult('get_claim',result)[0];
+    var parsed = JSON.parse(decoded);
+    if(parsed.exists) {
+      var found = false;
+      claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
+      if(!found) claims = [parsed, ...claims];
+      renderClaims();
+      updateStats();
+    }
+  }).catch(function(e){ console.error('Refresh failed:',e); });
+}
+
+function lookupClaim() {
+  var id = document.getElementById('lookupId').value;
+  if(!id){alert('Please enter a claim ID');return}
+  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
+  provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
+    var decoded = iface.decodeFunctionResult('get_claim',result)[0];
+    var parsed = JSON.parse(decoded);
+    if(parsed.exists) {
+      saveClaimId(id);
+      var found = false;
+      claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
+      if(!found) claims = [parsed, ...claims];
+      renderClaims();
+      updateStats();
+    } else {
+      alert('Claim not found');
+    }
+  }).catch(function(e){ console.error(e); showError('Lookup failed: ' + e.message); });
+}
+
+function loadClaimsByIds() {
+  var ids = getSavedIds();
+  if(ids.length === 0) {
+    claims = [];
     renderClaims();
     updateStats();
-    alert('Claim submitted! TX: '+txHash);
-  }catch(e){console.error(e);showError('Submit failed: '+e.message)}
-}
-
-// Retry wrapper for rate limiting
-async function withRetry(fn, maxAttempts) {
-  var attempts = 0;
-  var delay = 4000;
-  while (attempts < maxAttempts) {
-    try {
-      return await fn();
-    } catch (e) {
-      var msg = (e && e.message) || '';
-      if (msg.indexOf('-32005') !== -1 || msg.indexOf('rate limit') !== -1) {
-        attempts++;
-        console.warn('Retry ' + attempts + '/' + maxAttempts + ' after ' + delay + 'ms');
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2;
-        continue;
-      }
-      throw e;
-    }
+    return Promise.resolve();
   }
-  throw new Error('Too many retries');
+  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
+  var promises = ids.map(function(id){
+    return provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
+      var decoded = iface.decodeFunctionResult('get_claim',result)[0];
+      var parsed = JSON.parse(decoded);
+      return parsed.exists ? parsed : null;
+    }).catch(function(){ return null; });
+  });
+  return Promise.all(promises).then(function(results){
+    claims = results.filter(function(c){ return c !== null; });
+    renderClaims();
+    updateStats();
+  });
 }
 
-async function resolveClaim(id){
-  try{
-    var txHash = await withRetry(() => client.writeContract({
-      address: CONTRACT,
-      functionName: 'resolve_claim',
-      args: [id],
-      value: 0
-    }));
-    alert('Resolution sent! Waiting for AI consensus...');
-    setTimeout(function() { refreshClaim(id); }, 5000);
-  }catch(e){console.error(e);showError('Resolve failed: '+e.message)}
-}
-
-async function refreshClaim(id){
-  try{
-    var result = await client.readContract({
-      address: CONTRACT,
-      functionName: 'get_claim',
-      args: [id],
-      stateStatus: 'accepted'
-    });
-    var data = result?.data ?? result;
-    if(data && data !== 'undefined'){
-      var parsed = JSON.parse(data);
-      if(parsed.exists){
-        claims = claims.map(c => c.claim_id===id ? parsed : c);
-        saveClaims();
-        renderClaims();
-        updateStats();
-      }
-    }
-  }catch(e){console.error('Refresh failed:',e);}
-}
-
-async function lookupClaim(){
-  var id=document.getElementById('lookupId').value;
-  if(!id){alert('Please enter a claim ID');return}
-  try{
-    var result = await client.readContract({
-      address: CONTRACT,
-      functionName: 'get_claim',
-      args: [id],
-      stateStatus: 'accepted'
-    });
-    var data = result?.data ?? result;
-    if(data && data !== 'undefined'){
-      var parsed = JSON.parse(data);
-      if(parsed.exists){
-        saveClaimId(id);
-        var existing=claims.find(c=>c.claim_id===id);
-        if(existing){
-          claims=claims.map(c=>c.claim_id===id?parsed:c);
-        }else{
-          claims=[parsed,...claims];
-        }
-        saveClaims();
-        renderClaims();
-        updateStats();
-      }else{
-        alert('Claim not found');
-      }
-    }
-  }catch(e){console.error(e);showError('Lookup failed: '+e.message)}
-}
-
-// Expose functions to window for onclick
-window.connect = connect;
-window.submitClaim = submitClaim;
-window.resolveClaim = resolveClaim;
-window.lookupClaim = lookupClaim;
-window.setFilter = setFilter;
-window.filterClaims = filterClaims;
-
-function renderClaims(){
-  var list=document.getElementById('claimsList');
-  var search=document.getElementById('searchInput').value.toLowerCase();
-  var filtered=claims;
-  if(filter==='pending')filtered=claims.filter(c=>!c.resolved);
-  if(filter==='resolved')filtered=claims.filter(c=>c.resolved);
-  if(search)filtered=filtered.filter(c=>c.claim_id.toLowerCase().includes(search)||(c.text||'').toLowerCase().includes(search)||(c.category||'').toLowerCase().includes(search));
+function renderClaims() {
+  var list = document.getElementById('claimsList');
+  var search = document.getElementById('searchInput').value.toLowerCase();
+  var filtered = claims;
+  if(filter==='pending') filtered = claims.filter(function(c){return !c.resolved;});
+  if(filter==='resolved') filtered = claims.filter(function(c){return c.resolved;});
+  if(search) filtered = filtered.filter(function(c){
+    return c.claim_id.toLowerCase().includes(search) || (c.text||'').toLowerCase().includes(search);
+  });
   if(filtered.length===0){list.innerHTML='<div class="empty">No claims found</div>';return}
-  list.innerHTML=filtered.map(c=>`
-    <div class="claim-card">
-      <div class="claim-top">
-        <span class="claim-id">#${c.claim_id}</span>
-        ${c.resolved?`<span class="verdict verdict-${c.verdict?.toLowerCase()}">${c.verdict}</span>`:''}
-      </div>
-      <p class="claim-text">${c.text||''}</p>
-      ${c.resolved?`
-        <div class="claim-details">
-          <div class="details-row"><span>Verdict</span><span>${c.verdict}</span></div>
-          ${c.reasoning?`<p class="reasoning">${c.reasoning}</p>`:''}
-        </div>
-      `:''}
-      <div class="claim-footer">
-        <span class="claim-submitter">${c.submitter?.slice(0,6)}...${c.submitter?.slice(-4)}</span>
-        ${!c.resolved?`<button class="resolve-btn" onclick="resolveClaim('${c.claim_id}')">Resolve</button>`:''}
-      </div>
-      <div class="claim-time" style="margin-top:0.5rem">${c.timestamp?new Date(c.timestamp*1000).toLocaleString():''}</div>
-    </div>
-  `).join('');
+  list.innerHTML = filtered.map(function(c){
+    return '<div class="claim-card">' +
+      '<div class="claim-top">' +
+        '<span class="claim-id">#' + c.claim_id + '</span>' +
+        (c.resolved ? '<span class="verdict verdict-' + (c.verdict||'').toLowerCase() + '">' + c.verdict + '</span>' : '') +
+      '</div>' +
+      '<p class="claim-text">' + (c.text||'') + '</p>' +
+      (c.resolved ? '<div class="claim-details">' +
+        '<div class="details-row"><span>Verdict</span><span>' + c.verdict + '</span></div>' +
+        (c.reasoning ? '<p class="reasoning">' + c.reasoning + '</p>' : '') +
+      '</div>' : '') +
+      '<div class="claim-footer">' +
+        '<span class="claim-submitter">' + (c.submitter ? c.submitter.slice(0,6)+'...'+c.submitter.slice(-4) : '') + '</span>' +
+        (!c.resolved ? '<button class="resolve-btn" onclick="resolveClaim(\'' + c.claim_id + '\')">Resolve</button>' : '') +
+      '</div>' +
+      '<div class="claim-time">' + (c.timestamp ? new Date(c.timestamp*1000).toLocaleString() : '') + '</div>' +
+    '</div>';
+  }).join('');
 }
 
-function updateStats(){
-  document.getElementById('statTotal').textContent=claims.length;
-  document.getElementById('statTrue').textContent=claims.filter(c=>c.verdict==='TRUE').length;
-  document.getElementById('statFalse').textContent=claims.filter(c=>c.verdict==='FALSE').length;
-  document.getElementById('statInconclusive').textContent=claims.filter(c=>c.verdict==='INCONCLUSIVE').length;
-  document.getElementById('claimsCount').textContent=claims.length+' total';
+function updateStats() {
+  document.getElementById('statTotal').textContent = claims.length;
+  document.getElementById('statTrue').textContent = claims.filter(function(c){return c.verdict==='TRUE';}).length;
+  document.getElementById('statFalse').textContent = claims.filter(function(c){return c.verdict==='FALSE';}).length;
+  document.getElementById('statInconclusive').textContent = claims.filter(function(c){return c.verdict==='INCONCLUSIVE';}).length;
+  document.getElementById('claimsCount').textContent = claims.length + ' total';
 }
 
-function setFilter(f){
-  filter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
+function setFilter(f) {
+  filter = f;
+  var btns = document.querySelectorAll('.filter-btn');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('active');
+  if(event && event.target) event.target.classList.add('active');
   renderClaims();
 }
 
-function filterClaims(){renderClaims()}
-
-// Load claims by their actual IDs from blockchain
-async function loadClaimsByIds() {
-  var ids = getSavedIds();
-  var allClaims = [];
-  for (var i = 0; i < ids.length; i++) {
-    try {
-      var result = await client.readContract({
-        address: CONTRACT,
-        functionName: 'get_claim',
-        args: [ids[i]],
-        stateStatus: 'accepted'
-      });
-      var data = result?.data ?? result;
-      if (data && data !== 'undefined') {
-        try {
-          var parsed = JSON.parse(data);
-          if (parsed.exists) allClaims.push(parsed);
-        } catch (e) {}
-      }
-    } catch (e) {}
-  }
-  claims = allClaims;
-  renderClaims();
-  updateStats();
-}
+function filterClaims(){renderClaims();}
 </script>
 </body>
 </html>
