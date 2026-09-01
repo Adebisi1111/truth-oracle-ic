@@ -158,9 +158,12 @@
 <footer>TruthOracle — Built on GenLayer | Contract: 0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-<script>
+<script type="module">
+import { createClient } from 'https://esm.sh/genlayer-js@1.1.8';
+import { testnetBradbury } from 'https://esm.sh/genlayer-js@1.1.8/chains';
+
 var CONTRACT = '0x5ADaFc3004fF89A869DEE967DFAe8091d982b60d';
-var provider, signer, account;
+var provider, signer, account, client;
 var claims = [];
 var filter = 'all';
 
@@ -188,6 +191,10 @@ function connect() {
     return signer.getAddress();
   }).then(function(addr){
     account = addr;
+    client = createClient({
+      chain: testnetBradbury,
+      account: account
+    });
     document.getElementById('connectBtn').textContent = account.slice(0,6)+'...'+account.slice(-4);
     document.getElementById('connectBtn').className = 'btn btn-gradient';
     document.getElementById('submitBtn').disabled = false;
@@ -218,11 +225,12 @@ function submitClaim() {
   var text = document.getElementById('claimText').value;
   var category = document.getElementById('claimCategory').value;
   if(!id||!text){alert('Please fill all fields');return}
-  var iface = new ethers.utils.Interface(['function submit_claim(string,string,string)']);
-  var data = iface.encodeFunctionData('submit_claim',[id,text,category]);
-  signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
-    return tx.wait();
-  }).then(function(){
+  client.writeContract({
+    address: CONTRACT,
+    functionName: 'submit_claim',
+    args: [id, text, category],
+    value: 0
+  }).then(function(txHash){
     saveClaimId(id);
     document.getElementById('claimId').value='';
     document.getElementById('claimText').value='';
@@ -236,11 +244,12 @@ function submitClaim() {
 }
 
 function resolveClaim(id) {
-  var iface = new ethers.utils.Interface(['function resolve_claim(string)']);
-  var data = iface.encodeFunctionData('resolve_claim',[id]);
-  signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
-    return tx.wait();
-  }).then(function(){
+  client.writeContract({
+    address: CONTRACT,
+    functionName: 'resolve_claim',
+    args: [id],
+    value: 0
+  }).then(function(txHash){
     alert('Resolution sent! Waiting for AI consensus...');
     setTimeout(function(){ refreshClaim(id); }, 10000);
   }).catch(function(e){
@@ -250,16 +259,22 @@ function resolveClaim(id) {
 }
 
 function refreshClaim(id) {
-  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
-  provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
-    var decoded = iface.decodeFunctionResult('get_claim',result)[0];
-    var parsed = JSON.parse(decoded);
-    if(parsed.exists) {
-      var found = false;
-      claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
-      if(!found) claims = [parsed, ...claims];
-      renderClaims();
-      updateStats();
+  client.readContract({
+    address: CONTRACT,
+    functionName: 'get_claim',
+    args: [id],
+    stateStatus: 'accepted'
+  }).then(function(result){
+    var data = result?.data ?? result;
+    if(data && data !== 'undefined'){
+      var parsed = JSON.parse(data);
+      if(parsed.exists) {
+        var found = false;
+        claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
+        if(!found) claims = [parsed, ...claims];
+        renderClaims();
+        updateStats();
+      }
     }
   }).catch(function(e){ console.error('Refresh failed:',e); });
 }
@@ -267,19 +282,25 @@ function refreshClaim(id) {
 function lookupClaim() {
   var id = document.getElementById('lookupId').value;
   if(!id){alert('Please enter a claim ID');return}
-  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
-  provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
-    var decoded = iface.decodeFunctionResult('get_claim',result)[0];
-    var parsed = JSON.parse(decoded);
-    if(parsed.exists) {
-      saveClaimId(id);
-      var found = false;
-      claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
-      if(!found) claims = [parsed, ...claims];
-      renderClaims();
-      updateStats();
-    } else {
-      alert('Claim not found');
+  client.readContract({
+    address: CONTRACT,
+    functionName: 'get_claim',
+    args: [id],
+    stateStatus: 'accepted'
+  }).then(function(result){
+    var data = result?.data ?? result;
+    if(data && data !== 'undefined'){
+      var parsed = JSON.parse(data);
+      if(parsed.exists) {
+        saveClaimId(id);
+        var found = false;
+        claims = claims.map(function(c){ if(c.claim_id===id){found=true;return parsed;} return c; });
+        if(!found) claims = [parsed, ...claims];
+        renderClaims();
+        updateStats();
+      } else {
+        alert('Claim not found');
+      }
     }
   }).catch(function(e){ console.error(e); showError('Lookup failed: ' + e.message); });
 }
@@ -292,12 +313,21 @@ function loadClaimsByIds() {
     updateStats();
     return Promise.resolve();
   }
-  var iface = new ethers.utils.Interface(['function get_claim(string) view returns (string)']);
   var promises = ids.map(function(id){
-    return provider.call({to:CONTRACT,data:iface.encodeFunctionData('get_claim',[id])}).then(function(result){
-      var decoded = iface.decodeFunctionResult('get_claim',result)[0];
-      var parsed = JSON.parse(decoded);
-      return parsed.exists ? parsed : null;
+    return client.readContract({
+      address: CONTRACT,
+      functionName: 'get_claim',
+      args: [id],
+      stateStatus: 'accepted'
+    }).then(function(result){
+      var data = result?.data ?? result;
+      if(data && data !== 'undefined'){
+        try {
+          var parsed = JSON.parse(data);
+          return parsed.exists ? parsed : null;
+        } catch(e){ return null; }
+      }
+      return null;
     }).catch(function(){ return null; });
   });
   return Promise.all(promises).then(function(results){
