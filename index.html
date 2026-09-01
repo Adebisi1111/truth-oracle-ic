@@ -103,14 +103,6 @@
     <div class="card-title">Submit a Claim</div>
     <input type="text" id="claimId" class="input" placeholder="Claim ID (e.g., claim-1)">
     <textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
-    <select id="claimCategory" class="input">
-      <option value="General">General</option>
-      <option value="Science">Science</option>
-      <option value="News">News</option>
-      <option value="Finance">Finance</option>
-      <option value="Tech">Tech</option>
-      <option value="Sports">Sports</option>
-    </select>
     <button id="submitBtn" class="btn btn-gradient" style="width:100%;padding:0.75rem" onclick="submitClaim()" disabled>Connect Wallet to Submit</button>
   </div>
 
@@ -230,7 +222,7 @@ async function submitClaim(){
     var txHash = await withRetry(() => client.writeContract({
       address: CONTRACT,
       functionName: 'submit_claim',
-      args: [id, text, category],
+      args: [id, text],
       value: 0
     }));
     
@@ -242,16 +234,12 @@ async function submitClaim(){
       claim_id: id,
       exists: true,
       text: text,
-      category: category,
       submitter: account,
       timestamp: Math.floor(Date.now()/1000),
       resolved: false,
       verdict: '',
-      confidence: 0,
-      validator_count: 0,
       reasoning: '',
-      resolved_at: 0,
-      appeal_count: 0
+      resolved_at: 0
     };
     claims = [newClaim, ...claims];
     
@@ -373,11 +361,9 @@ function renderClaims(){
         ${c.resolved?`<span class="verdict verdict-${c.verdict?.toLowerCase()}">${c.verdict}</span>`:''}
       </div>
       <p class="claim-text">${c.text||''}</p>
-      ${c.category?`<span class="category">${c.category}</span>`:''}
       ${c.resolved?`
         <div class="claim-details">
-          <div class="details-row"><span>Confidence</span><span>${c.confidence}%</span></div>
-          <div class="details-row"><span>Validators</span><span>${c.validator_count}</span></div>
+          <div class="details-row"><span>Verdict</span><span>${c.verdict}</span></div>
           ${c.reasoning?`<p class="reasoning">${c.reasoning}</p>`:''}
         </div>
       `:''}
