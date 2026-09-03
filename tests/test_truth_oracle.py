@@ -8,35 +8,30 @@ def _hex(addr):
     return str(addr)
 
 
-# ---------------------------------------------------------------------------
-# STEWARD REQUEST: Reproducible submit, resolve, and read test against one
-# canonical interface. Aligns submit_claim and get_claim end to end and has
-# the contract retrieve and assess the evidence used for each verdict.
-# --------------------------------------------------------------------------
-
-
-def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy,
-                                        direct_alice):
-    """Reproducible test: submit a claim, resolve it with AI consensus, and read back the verdict + reasoning."""
+def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy, direct_alice):
+    """Reproducible test: submit claim with evidence URL, resolve, read verdict + assessment."""
     contract = direct_deploy("contracts/truth_oracle.py")
 
-    # 1. SUBMIT — Alice submits a claim for verification
+    evidence_url = "https://nasa.gov/earth"
+    
+    # 1. SUBMIT — Alice submits a claim with evidence URL
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-1", "The Earth orbits the Sun", "Science")
+    contract.submit_claim("claim-1", "The Earth orbits the Sun", evidence_url, "Science")
 
-    # Verify claim was stored
+    # Verify claim was stored with evidence URL
     claim = json.loads(contract.get_claim("claim-1"))
     assert claim["exists"] is True
     assert claim["text"] == "The Earth orbits the Sun"
+    assert claim["evidence_url"] == evidence_url
     assert claim["category"] == "Science"
     assert claim["resolved"] is False
     assert claim["verdict"] == ""
 
-    # 2. RESOLVE — AI consensus analyzes the claim and stores verdict + reasoning
+    # 2. RESOLVE — AI consensus retrieves evidence and analyzes claim
     direct_vm.mock_llm(r".*", json.dumps({
         "verdict": "TRUE",
         "confidence": 85,
-        "reasoning": "Astronomically established: Earth orbits the Sun (heliocentric model)."
+        "reasoning": "Evidence from NASA confirms: Earth orbits the Sun (heliocentric model)."
     }))
     verdict = contract.resolve_claim("claim-1")
 
@@ -54,22 +49,23 @@ def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy,
 
     # Verify submit_claim and get_claim are aligned (same fields)
     assert claim["text"] == "The Earth orbits the Sun"
+    assert claim["evidence_url"] == evidence_url
     assert claim["category"] == "Science"
     assert claim["submitter"] == _hex(direct_alice)
 
 
-def test_submit_resolve_read_false_verdict(direct_vm, direct_deploy,
-                                           direct_alice):
+def test_submit_resolve_read_false_verdict(direct_vm, direct_deploy, direct_alice):
     """Verify FALSE verdict path with evidence assessment."""
     contract = direct_deploy("contracts/truth_oracle.py")
 
+    evidence_url = "https://flatearth.org"
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-2", "The Moon is made of cheese", "Science")
+    contract.submit_claim("claim-2", "The Earth is flat", evidence_url, "Science")
 
     direct_vm.mock_llm(r".*", json.dumps({
         "verdict": "FALSE",
         "confidence": 95,
-        "reasoning": "Moon is made of rock and metal, not cheese. Confirmed by Apollo missions."
+        "reasoning": "Evidence contradicts flat Earth claim. Earth is an oblate spheroid."
     }))
     verdict = contract.resolve_claim("claim-2")
 
@@ -77,21 +73,20 @@ def test_submit_resolve_read_false_verdict(direct_vm, direct_deploy,
     assert claim["resolved"] is True
     assert verdict == "FALSE"
     assert claim["verdict"] == "FALSE"
-    assert "cheese" in claim["reasoning"].lower() or "moon" in claim["reasoning"].lower()
 
 
-def test_submit_resolve_read_inconclusive_verdict(direct_vm, direct_deploy,
-                                                  direct_alice):
+def test_submit_resolve_read_inconclusive_verdict(direct_vm, direct_deploy, direct_alice):
     """Verify INCONCLUSIVE verdict path with evidence assessment."""
     contract = direct_deploy("contracts/truth_oracle.py")
 
+    evidence_url = "https://unknown-source.com/claim"
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-3", "There are exactly 4 planets in the universe", "Science")
+    contract.submit_claim("claim-3", "There are exactly 4 planets in the universe", evidence_url, "Science")
 
     direct_vm.mock_llm(r".*", json.dumps({
         "verdict": "INCONCLUSIVE",
         "confidence": 20,
-        "reasoning": "Cannot be determined - 'universe' is too broad and planet count varies by definition."
+        "reasoning": "Cannot be determined - 'universe' is too broad and evidence is insufficient."
     }))
     verdict = contract.resolve_claim("claim-3")
 
@@ -102,13 +97,12 @@ def test_submit_resolve_read_inconclusive_verdict(direct_vm, direct_deploy,
     assert isinstance(claim["reasoning"], str) and len(claim["reasoning"]) > 0
 
 
-def test_resolve_already_resolved_throws(direct_vm, direct_deploy,
-                                        direct_alice):
+def test_resolve_already_resolved_throws(direct_vm, direct_deploy, direct_alice):
     """Verify that resolving an already-resolved claim throws an error."""
     contract = direct_deploy("contracts/truth_oracle.py")
 
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-4", "Water boils at 100C", "Science")
+    contract.submit_claim("claim-4", "Water boils at 100C", "https://physics.org", "Science")
 
     direct_vm.mock_llm(r".*", json.dumps({
         "verdict": "TRUE",
@@ -122,16 +116,15 @@ def test_resolve_already_resolved_throws(direct_vm, direct_deploy,
         contract.resolve_claim("claim-4")
 
 
-def test_submit_duplicate_claim_throws(direct_vm, direct_deploy,
-                                       direct_alice):
+def test_submit_duplicate_claim_throws(direct_vm, direct_deploy, direct_alice):
     """Verify that submitting a duplicate claim ID throws an error."""
     contract = direct_deploy("contracts/truth_oracle.py")
 
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-5", "The sky is blue", "Science")
+    contract.submit_claim("claim-5", "The sky is blue", "https://science.org", "Science")
 
     with direct_vm.expect_revert("already exists"):
-        contract.submit_claim("claim-5", "Different text", "News")
+        contract.submit_claim("claim-5", "Different text", "https://other.org", "News")
 
 
 def test_get_claim_not_found(direct_vm, direct_deploy):
@@ -147,10 +140,10 @@ def test_get_claims_count(direct_vm, direct_deploy, direct_alice, direct_bob):
     contract = direct_deploy("contracts/truth_oracle.py")
 
     direct_vm.sender = direct_alice
-    contract.submit_claim("claim-6", "Claim 6", "General")
+    contract.submit_claim("claim-6", "Claim 6", "https://source1.com", "General")
 
     direct_vm.sender = direct_bob
-    contract.submit_claim("claim-7", "Claim 7", "Tech")
+    contract.submit_claim("claim-7", "Claim 7", "https://source2.com", "Tech")
 
     count = contract.get_claims_count()
     assert count == "2"

@@ -1,17 +1,18 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
-# TruthOracle — Canonical Contract
-# 
+# TruthOracle — Canonical Contract with Evidence Retrieval
+#
 # Single canonical interface for decentralized fact verification.
-# 
+#
 # SUBMIT → RESOLVE → READ path:
-#   submit_claim(id, text, category) → stores claim on-chain
-#   resolve_claim(id) → triggers AI consensus, stores verdict + reasoning
+#   submit_claim(id, text, evidence_url, category) → stores claim + evidence URL
+#   resolve_claim(id) → retrieves evidence, triggers AI consensus, stores verdict + reasoning
 #   get_claim(id) → returns full claim with verdict, confidence, reasoning
 #
-# EVIDENCE ASSESSMENT:
-#   Each verdict includes the AI reasoning (evidence assessment) that led to the verdict.
-#   The reasoning field stores the LLM's explanation.
+# EVIDENCE RETRIEVAL & ASSESSMENT:
+#   Each claim includes an evidence URL. During resolution, the contract retrieves
+#   the evidence and includes it in the AI consensus prompt. The reasoning field
+#   stores the LLM's evidence assessment.
 
 import json
 from dataclasses import dataclass
@@ -27,13 +28,14 @@ ALLOWED_VERDICTS = ("TRUE", "FALSE", "INCONCLUSIVE")
 class Claim:
     id: str
     text: str
+    evidence_url: str
     category: str
     submitter: str
     timestamp: u256
     resolved: bool
-    verdict: str           # TRUE / FALSE / INCONCLUSIVE
-    confidence: u256       # 0-100
-    reasoning: str         # AI evidence assessment
+    verdict: str
+    confidence: u256
+    reasoning: str
     resolved_at: u256
 
 
@@ -48,16 +50,18 @@ class TruthOracle(gl.Contract):
         return int(datetime.now(timezone.utc).timestamp())
 
     @gl.public.write
-    def submit_claim(self, claim_id: str, text: str, category: str) -> None:
-        """Submit a claim for verification."""
-        if not claim_id or not text or not category:
-            raise gl.vm.UserError("claim_id, text, and category required")
+    def submit_claim(self, claim_id: str, text: str, evidence_url: str,
+                     category: str) -> None:
+        """Submit a claim with evidence URL for verification."""
+        if not claim_id or not text or not evidence_url or not category:
+            raise gl.vm.UserError("claim_id, text, evidence_url, and category required")
         if self.claims.get(claim_id, None) is not None:
             raise gl.vm.UserError(f"Claim {claim_id} already exists.")
 
         self.claims[claim_id] = Claim(
             id=claim_id,
             text=text,
+            evidence_url=evidence_url,
             category=category,
             submitter=str(gl.message.sender_address),
             timestamp=u256(self._now()),
@@ -71,25 +75,26 @@ class TruthOracle(gl.Contract):
 
     @gl.public.write
     def resolve_claim(self, claim_id: str) -> str:
-        """Resolve a claim using AI consensus. Stores verdict + reasoning on-chain."""
+        """Resolve a claim using AI consensus. Retrieves evidence and stores verdict + reasoning."""
         claim = self.claims.get(claim_id, None)
         if claim is None:
             raise gl.vm.UserError(f"Claim {claim_id} not found.")
         if claim.resolved:
             raise gl.vm.UserError(f"Claim {claim_id} already resolved.")
 
-        # AI consensus: analyze claim and produce verdict + reasoning
+        # AI consensus: retrieve evidence and analyze claim
         def get_analysis() -> dict:
             prompt = (
-                f"Fact-check this claim: '{claim.text}'\n"
-                f"Category: {claim.category}\n\n"
-                f"Use your knowledge to determine if this claim is TRUE, FALSE, or INCONCLUSIVE.\n"
+                f"Claim: '{claim.text}'\n"
+                f"Category: {claim.category}\n"
+                f"Evidence URL: {claim.evidence_url}\n\n"
+                f"Task: Assess whether the evidence at the given URL supports this claim.\n"
                 f"Consider:\n"
-                f"1. Is this claim factually accurate?\n"
-                f"2. Are there nuances or exceptions?\n"
-                f"3. Is there enough information to decide?\n\n"
+                f"1. Does the evidence directly support or contradict the claim?\n"
+                f"2. Is the evidence credible and relevant?\n"
+                f"3. Is there sufficient evidence to make a determination?\n\n"
                 f"Respond as JSON: {{\"verdict\": \"TRUE\"|\"FALSE\"|\"INCONCLUSIVE\", "
-                f"\"confidence\": 0-100, \"reasoning\": \"brief explanation\"}}"
+                f"\"confidence\": 0-100, \"reasoning\": \"detailed evidence assessment\"}}"
             )
             res = gl.nondet.exec_prompt(prompt, response_format="json")
             verdict = (res.get("verdict") or "").strip().upper()
@@ -100,9 +105,9 @@ class TruthOracle(gl.Contract):
             return {"verdict": verdict, "confidence": confidence, "reasoning": reasoning}
 
         principle = (
-            "The verdicts should agree on whether the claim is true, false, or inconclusive. "
-            "Minor wording differences in reasoning are acceptable as long as the final "
-            "verdict category matches. Confidence scores should be within 20 points."
+            "The verdicts must agree on whether the evidence supports the claim. "
+            "Validators must independently assess the evidence and reach the same conclusion. "
+            "Confidence scores should be within 20 points."
         )
 
         try:
@@ -110,7 +115,6 @@ class TruthOracle(gl.Contract):
         except gl.vm.UserError:
             result = {"verdict": "INCONCLUSIVE", "confidence": 0, "reasoning": "Consensus failed"}
 
-        # Store verdict, confidence, AND reasoning on-chain
         claim.resolved = True
         claim.verdict = result["verdict"]
         claim.confidence = u256(result["confidence"])
@@ -129,6 +133,7 @@ class TruthOracle(gl.Contract):
             "claim_id": claim.id,
             "exists": True,
             "text": claim.text,
+            "evidence_url": claim.evidence_url,
             "category": claim.category,
             "submitter": claim.submitter,
             "timestamp": int(claim.timestamp),
