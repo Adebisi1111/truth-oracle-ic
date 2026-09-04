@@ -103,6 +103,7 @@
     <div class="card-title">Submit a Claim</div>
     <input type="text" id="claimId" class="input" placeholder="Claim ID (e.g., claim-1)">
     <textarea id="claimText" class="input" rows="3" placeholder="Enter your claim (e.g., 'The Earth orbits the Sun')"></textarea>
+    <input type="text" id="evidenceUrl" class="input" placeholder="Evidence URL (e.g., https://nasa.gov/earth)">
     <select id="claimCategory" class="input">
       <option value="General">General</option>
       <option value="Science">Science</option>
@@ -160,7 +161,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-const CONTRACT = '0x3657b6DFa52De026d069A75556A181a7901EC77E';
+const CONTRACT = '0xCeaB0725451D69c0bba38248DeA547872Cd73ccc';
 var provider, signer, account;
 var claims = [];
 var filter = 'all';
@@ -218,9 +219,9 @@ function submitClaim() {
   var id = document.getElementById('claimId').value;
   var text = document.getElementById('claimText').value;
   var category = document.getElementById('claimCategory').value;
-  if(!id||!text){alert('Please fill all fields');return}
-  var iface = new ethers.utils.Interface(['function submit_claim(string,string,string)']);
-  var data = iface.encodeFunctionData('submit_claim',[id,text,category]);
+  if(!id||!text||!evidenceUrl){alert('Please fill all fields');return}
+  var iface = new ethers.utils.Interface(['function submit_claim(string,string,string,string)']);
+  var data = iface.encodeFunctionData('submit_claim',[id,text,evidenceUrl,category]);
   signer.sendTransaction({to:CONTRACT,data:data,gasLimit:500000n}).then(function(tx){
     return tx.wait();
   }).then(function(){

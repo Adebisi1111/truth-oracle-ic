@@ -9,8 +9,8 @@ def _hex(addr):
 
 
 def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy, direct_alice):
-    """Reproducible test: submit claim with evidence URL, resolve, read verdict + assessment."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    """End-to-end test: submit claim with evidence URL, resolve, read verdict."""
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     evidence_url = "https://nasa.gov/earth"
     
@@ -56,7 +56,7 @@ def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy, direct_alice):
 
 def test_submit_resolve_read_false_verdict(direct_vm, direct_deploy, direct_alice):
     """Verify FALSE verdict path with evidence assessment."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     evidence_url = "https://flatearth.org"
     direct_vm.sender = direct_alice
@@ -77,7 +77,7 @@ def test_submit_resolve_read_false_verdict(direct_vm, direct_deploy, direct_alic
 
 def test_submit_resolve_read_inconclusive_verdict(direct_vm, direct_deploy, direct_alice):
     """Verify INCONCLUSIVE verdict path with evidence assessment."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     evidence_url = "https://unknown-source.com/claim"
     direct_vm.sender = direct_alice
@@ -99,7 +99,7 @@ def test_submit_resolve_read_inconclusive_verdict(direct_vm, direct_deploy, dire
 
 def test_resolve_already_resolved_throws(direct_vm, direct_deploy, direct_alice):
     """Verify that resolving an already-resolved claim throws an error."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     direct_vm.sender = direct_alice
     contract.submit_claim("claim-4", "Water boils at 100C", "https://physics.org", "Science")
@@ -118,7 +118,7 @@ def test_resolve_already_resolved_throws(direct_vm, direct_deploy, direct_alice)
 
 def test_submit_duplicate_claim_throws(direct_vm, direct_deploy, direct_alice):
     """Verify that submitting a duplicate claim ID throws an error."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     direct_vm.sender = direct_alice
     contract.submit_claim("claim-5", "The sky is blue", "https://science.org", "Science")
@@ -129,7 +129,7 @@ def test_submit_duplicate_claim_throws(direct_vm, direct_deploy, direct_alice):
 
 def test_get_claim_not_found(direct_vm, direct_deploy):
     """Verify that get_claim returns exists=False for unknown claim."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     claim = json.loads(contract.get_claim("nonexistent"))
     assert claim["exists"] is False
@@ -137,7 +137,7 @@ def test_get_claim_not_found(direct_vm, direct_deploy):
 
 def test_get_claims_count(direct_vm, direct_deploy, direct_alice, direct_bob):
     """Verify that get_claims_count returns the correct count."""
-    contract = direct_deploy("contracts/truth_oracle.py")
+    contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
     direct_vm.sender = direct_alice
     contract.submit_claim("claim-6", "Claim 6", "https://source1.com", "General")
