@@ -29,6 +29,7 @@ class Claim:
     id: str
     text: str
     evidence_url: str
+    evidence_content: str
     category: str
     submitter: str
     timestamp: u256
@@ -62,6 +63,7 @@ class TruthOracle(gl.Contract):
             id=claim_id,
             text=text,
             evidence_url=evidence_url,
+            evidence_content="",
             category=category,
             submitter=str(gl.message.sender_address),
             timestamp=u256(self._now()),
@@ -82,13 +84,19 @@ class TruthOracle(gl.Contract):
         if claim.resolved:
             raise gl.vm.UserError(f"Claim {claim_id} already resolved.")
 
-        # AI consensus: retrieve evidence and analyze claim
+        # Retrieve evidence content from URL
+        evidence_content = self._retrieve_evidence(claim.evidence_url)
+        claim.evidence_content = evidence_content
+        self.claims[claim_id] = claim
+
+        # AI consensus: analyze claim with retrieved evidence
         def get_analysis() -> dict:
             prompt = (
                 f"Claim: '{claim.text}'\n"
                 f"Category: {claim.category}\n"
-                f"Evidence URL: {claim.evidence_url}\n\n"
-                f"Task: Assess whether the evidence at the given URL supports this claim.\n"
+                f"Evidence URL: {claim.evidence_url}\n"
+                f"Evidence Content: {evidence_content[:2000] if evidence_content else 'No content retrieved'}\n\n"
+                f"Task: Assess whether the evidence supports this claim.\n"
                 f"Consider:\n"
                 f"1. Does the evidence directly support or contradict the claim?\n"
                 f"2. Is the evidence credible and relevant?\n"
@@ -123,6 +131,23 @@ class TruthOracle(gl.Contract):
         self.claims[claim_id] = claim
         return result["verdict"]
 
+    def _retrieve_evidence(self, evidence_url: str) -> str:
+        """Retrieve evidence content from URL using equivalence principle."""
+        def leader() -> dict:
+            result = gl.nondet.web.render(evidence_url, mode="text")
+            return {"content": result}
+
+        def validator(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            return leader()["content"] == leader_result.calldata["content"]
+
+        try:
+            result = gl.vm.run_nondet_unsafe(leader, validator)
+            return result["content"]
+        except:
+            return ""
+
     @gl.public.view
     def get_claim(self, claim_id: str) -> str:
         """Get full claim including verdict and reasoning."""
@@ -134,6 +159,7 @@ class TruthOracle(gl.Contract):
             "exists": True,
             "text": claim.text,
             "evidence_url": claim.evidence_url,
+            "evidence_content": claim.evidence_content[:500] if claim.evidence_content else "",
             "category": claim.category,
             "submitter": claim.submitter,
             "timestamp": int(claim.timestamp),
