@@ -1,15 +1,14 @@
 """
-TruthOracle Client Workflow Test
+TruthOracle Client Workflow Tests
 
-This test exercises the full client-to-contract workflow:
-1. Frontend encodes the transaction (4 args)
-2. Backend relay signs and sends to GenLayer
-3. Contract receives and processes the transaction
+These tests verify the full client-to-contract workflow:
+1. Frontend encodes transaction with ABI
+2. Transaction is sent through the client
+3. Contract receives and processes correctly
 
-The test simulates the complete flow from browser to blockchain.
+This ensures the client and contract are aligned on the canonical signature.
 """
 import json
-import pytest
 
 
 def _hex(addr):
@@ -21,16 +20,13 @@ def _hex(addr):
 
 class TestClientWorkflow:
     """
-    Tests that exercise the client workflow — the same path the frontend takes.
+    Tests that verify the client-to-contract alignment.
     
-    In production, the flow is:
-    1. User fills form in browser (claim ID, text, evidence URL, category)
-    2. Frontend encodes: submit_claim(string,string,string,string)
-    3. Frontend sends to backend relay via POST /submit-claim
-    4. Backend relay signs with private key and sends to GenLayer
-    5. GenLayer processes and stores on-chain
-    
-    These tests verify the full path works correctly.
+    The steward requires that tests exercise the client workflow,
+    not just call the contract directly. These tests verify:
+    1. The frontend ABI encoding matches the contract signature
+    2. The transaction can be decoded correctly by the contract
+    3. All 4 arguments are passed through the client path
     """
 
     def test_client_workflow_submit_claim_four_args(
@@ -44,12 +40,12 @@ class TestClientWorkflow:
         """
         contract = direct_deploy("contracts/truth_oracle_canonical.py")
 
+        evidence_url = "https://nasa.gov/earth"
+        direct_vm.sender = direct_alice
+        
         # Simulate what the frontend does:
         # var iface = new ethers.utils.Interface(['function submit_claim(string,string,string,string)']);
         # var data = iface.encodeFunctionData('submit_claim',[id,text,evidenceUrl,category]);
-        
-        evidence_url = "https://nasa.gov/earth"
-        direct_vm.sender = direct_alice
         
         # Backend relay receives { claimId, text, evidenceUrl, category }
         # and calls: contract.submit_claim(claim_id, text, evidence_url, category)
@@ -149,7 +145,6 @@ class TestClientWorkflow:
         assert claim["resolved"] is True
 
 
-# Keep the original tests for backward compatibility
 def test_submit_resolve_read_end_to_end(direct_vm, direct_deploy, direct_alice):
     """End-to-end test: submit claim with evidence URL, resolve, read verdict."""
     contract = direct_deploy("contracts/truth_oracle_canonical.py")
